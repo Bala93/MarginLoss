@@ -176,7 +176,7 @@ class MedSegmentTrainer(Trainer):
             self.optimizer.step()
             # metric
             self.loss_meter.update(loss, inputs.size(0))
-            # predicts = F.softmax(outputs, dim=1)
+            predicts = F.softmax(outputs, dim=1)
             
             pred_labels = torch.argmax(outputs, dim=1)
             self.evaluator.update(
@@ -208,8 +208,8 @@ class MedSegmentTrainer(Trainer):
             loss = self.loss_func(outputs, labels)
             # metric
             self.loss_meter.update(loss)
-            # predicts = F.softmax(outputs, dim=1)
-            pred_labels = torch.argmax(F.softmax(outputs,dim=1), dim=1)
+            predicts = F.softmax(outputs, dim=1)
+            pred_labels = torch.argmax(predicts, dim=1)
             self.evaluator.update(
                 to_numpy(pred_labels),
                 to_numpy(labels)

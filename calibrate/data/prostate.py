@@ -44,9 +44,19 @@ def get_train_val_loader(data_root, batch_size=32, num_workers=8, pin_memory=Tru
     valid_dataset = ProstateDataset(valid_files)
     display_dataset = [valid_dataset[i] for i in range(0, len(valid_dataset), len(valid_dataset) // 16)] # num.of.images for visualization 
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=pin_memory, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
+    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
     display_loader = DataLoader(display_dataset, batch_size=8, drop_last=True)
 
     return train_loader, valid_loader, display_loader
+
+
+def get_test_loader(data_root, batch_size=32, num_workers=8, pin_memory=True):
+
+    test_path = os.path.join(data_root, 'valid')
+    test_files = glob.glob(valid_path + '/*')
+    test_dataset = ProstateDataset(test_files)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
+
+    return test_loader
