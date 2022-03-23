@@ -55,7 +55,7 @@ def get_train_val_loader(data_root, batch_size=32, num_workers=8, pin_memory=Tru
 def get_test_loader(data_root, batch_size=32, num_workers=8, pin_memory=True):
 
     test_path = os.path.join(data_root, 'valid')
-    test_files = glob.glob(valid_path + '/*')
+    test_files = glob.glob(test_path + '/*')
     test_dataset = ProstateDataset(test_files)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
 

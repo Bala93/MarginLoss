@@ -153,7 +153,6 @@ class MedSegmentTrainer(Trainer):
             # compute the time for data loading
             self.data_time_meter.update(time.time() - end)
             inputs, labels = inputs.to(self.device), labels.to(self.device)
-            # print (inputs.shape, labels.shape)
             # forward
             outputs = self.model(inputs)
 
@@ -189,6 +188,9 @@ class MedSegmentTrainer(Trainer):
             if (i + 1) % self.cfg.log_period == 0:
                 self.log_iter_info(i, max_iter, epoch)
             end = time.time()
+
+            #break
+
         self.log_epoch_info(epoch)
 
     @torch.no_grad()
@@ -228,6 +230,7 @@ class MedSegmentTrainer(Trainer):
             # if (i + 1) % self.cfg.log_period == 0:
             #     self.log_iter_info(i, max_iter, epoch, phase)
             end = time.time()
+
         self.log_eval_epoch_info(epoch, phase)
 
         return self.loss_meter.avg(0), self.evaluator.mean_score(main=True)
@@ -258,16 +261,16 @@ class MedSegmentTrainer(Trainer):
 
         return
 
-    def test(self):
-        logger.info("We are almost done : final testing ...")
-        self.test_loader = instantiate(self.cfg.data.object.test)
-        # test best pth
-        epoch = self.best_epoch
-        logger.info("#################")
-        logger.info(" Test at best epoch {}".format(epoch + 1))
-        logger.info("#################")
-        logger.info("Best epoch[{}] :".format(epoch + 1))
-        load_checkpoint(
-            osp.join(self.work_dir, "best.pth"), self.model, self.device
-        )
-        self.eval_epoch(self.test_loader, epoch, phase="Test")
+    # def test(self):
+    #     logger.info("We are almost done : final testing ...")
+    #     self.test_loader = instantiate(self.cfg.data.object.test)
+    #     # test best pth
+    #     epoch = self.best_epoch
+    #     logger.info("#################")
+    #     logger.info(" Test at best epoch {}".format(epoch + 1))
+    #     logger.info("#################")
+    #     logger.info("Best epoch[{}] :".format(epoch + 1))
+    #     load_checkpoint(
+    #         osp.join(self.work_dir, "best.pth"), self.model, self.device
+    #     )
+    #     self.eval_epoch(self.test_loader, epoch, phase="Test")

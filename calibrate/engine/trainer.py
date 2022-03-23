@@ -38,6 +38,7 @@ class Trainer:
     def build_data_loader(self) -> None:
         # data pipeline
         self.train_loader, self.val_loader, self.display_loader = instantiate(self.cfg.data.object.trainval)
+        self.test_loader = instantiate(self.cfg.data.object.test)
         logger.info("Data pipeline initialized")
 
     def build_model(self) -> None:
@@ -280,9 +281,6 @@ class Trainer:
             "Everything is perfect so far. Let's start training. Good luck!"
         )
 
-
-        # print (self.model, self.optimizer, self.loss_func, self.scheduler)
-
         for epoch in range(self.start_epoch, self.max_epoch):
             logger.info("=" * 20)
             logger.info(" Start epoch {}".format(epoch + 1))
@@ -323,24 +321,26 @@ class Trainer:
                     "Val/best_classify_score_table": self.evaluator.wandb_score_table(),
                     "Val/best_calibrate_score_table": self.calibrate_evaluator.wandb_score_table()
                 })
+
+            #break
+
         if self.cfg.wandb.enable:
             copyfile(
                 osp.join(self.work_dir, "best.pth"),
                 osp.join(self.work_dir, "{}-best.pth".format(wandb.run.name))
             )
 
-    def post_temperature(self):
-        model_with_temp = ModelWithTemperature(self.model, device=self.device)
-        model_with_temp.set_temperature(self.val_loader)
-        temp = model_with_temp.get_temperature()
-        wandb.log({
-            "temperature": temp
-        })
-        return temp
+    # def post_temperature(self):
+    #     model_with_temp = ModelWithTemperature(self.model, device=self.device)
+    #     model_with_temp.set_temperature(self.val_loader)
+    #     temp = model_with_temp.get_temperature()
+    #     wandb.log({
+    #         "temperature": temp
+    #     })
+    #     return temp
 
     def test(self):
         logger.info("We are almost done : final testing ...")
-        self.test_loader = instantiate(self.cfg.data.object.test)
         # test best pth
         epoch = self.best_epoch
         logger.info("#################")
@@ -351,8 +351,6 @@ class Trainer:
             osp.join(self.work_dir, "best.pth"), self.model, self.device
         )
         self.eval_epoch(self.test_loader, epoch, phase="Test")
-        temp = self.post_temperature()
-        self.eval_epoch(self.test_loader, epoch, phase="TestPT", temp=temp, post_temp=True)
 
     def run(self):
         self.train()
