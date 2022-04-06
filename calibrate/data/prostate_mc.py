@@ -29,12 +29,15 @@ class ProstateMCDataset(Dataset):
 
         with h5py.File(img_file_name, 'r') as data:
 
-            image = data["img"][:][sliceno,:,:]
-            mask = data["mask"][:][sliceno,:,:]
+            img = data["img"][:][sliceno,:,:]
+            msk = data["mask"][:][sliceno,:,:]
 
-            image = resize(image,[256,256],order=3,preserve_range=True)
-            mask = resize(mask, [256,256],order=0,preserve_range=True) 
-              
+            #image = resize(image,[256,256],order=3,preserve_range=True)
+            #mask = resize(mask, [256,256],order=0,preserve_range=True) 
+
+            image = img[64:256,64:256] # instead of resizing, cropping would be better, to avoid class imbalance. 
+            mask = msk[64:256,64:256] #  64:256,64:256 (192), 48:272,48:272 (224), 32:288,32:288 (256)
+
             mask = mask.astype(np.uint8)         
 
             image = np.expand_dims(image,axis=0)
