@@ -55,10 +55,14 @@ class CELossWithSVLS(torch.nn.Module):
         self.svls_kernel = self.svls_kernel.cuda()
 
     def forward(self, inputs, labels):
+
+        # print (inputs.shape, labels.shape)
+
         with torch.no_grad():
             oh_labels = (labels[...,None] == self.cls_idx).permute(0,3,1,2)
-            b, c, h, w = oh_labels.shape
-            x = oh_labels.view(b, c, h, w).repeat(1, 1, 1, 1, 1).float()
+            # print (oh_labels.shape)
+            # b, c, h, w = oh_labels.shape
+            x = oh_labels.float()
             x = F.pad(x, (1,1,1,1), mode='replicate')
             svls_labels = self.svls_layer(x)/self.svls_kernel.sum()
         return (- svls_labels * F.log_softmax(inputs, dim=1)).sum(dim=1).mean()
