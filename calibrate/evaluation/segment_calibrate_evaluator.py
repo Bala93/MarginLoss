@@ -27,6 +27,15 @@ class SegmentCalibrateEvaluator(DatasetEvaluator):
         self.aece_criterion = AdaptiveECELoss(self.num_bins).to(self.device)
         self.cece_criterion = ClasswiseECELoss(self.num_bins).to(self.device)
 
+        ## Dilation kernel for ECE
+        self.is_dilate = False ## Can be used as argument.
+
+        if self.is_dilate:
+            kernel = np.array([ [1, 1, 1],[1, 1, 1], [1, 1, 1]], dtype=np.float32)
+            self.kernel = torch.Tensor(np.expand_dims(np.expand_dims(kernel, 0), 0))
+            self.kernel = self.kernel.to(self.device)
+
+
     def reset(self) -> None:
         self.count = []
         self.nll = []
@@ -49,6 +58,11 @@ class SegmentCalibrateEvaluator(DatasetEvaluator):
         """
         assert logits.shape[0] == labels.shape[0]
         n, c, x, y = logits.shape
+
+        if self.is_dilate:
+            ## Dilation operation ECE
+            labels = (labels > 0).float()
+            labels = torch.clamp(torch.nn.functional.conv2d(labels, self.kernel, padding=(1, 1)), 0, 1).long()
 
         logits = torch.einsum("ncxy->nxyc", logits)
         logits = logits.reshape(n * x * y, -1)
