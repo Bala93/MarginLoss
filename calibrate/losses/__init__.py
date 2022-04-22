@@ -7,3 +7,4 @@ from .penalty_entropy import PenaltyEntropy
 from .penalty_l1 import PenaltyL1
 from .logit_margin_l1 import LogitMarginL1
 from .spatial_label_smoothing import CELossWithSVLS
+from .logit_margin_ce_dice import LogitMarginDICEL1
