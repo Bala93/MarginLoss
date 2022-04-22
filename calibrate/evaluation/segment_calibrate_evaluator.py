@@ -89,7 +89,7 @@ class SegmentCalibrateEvaluator(DatasetEvaluator):
         self.aece.append(aece)
         self.cece.append(cece)
 
-    def mean_score(self, print=False, all_metric=True):
+    def mean_score(self, isprint=False, all_metric=True):
         total_count = sum(self.count)
         nll, ece, aece, cece = 0, 0, 0, 0
         for i in range(len(self.nll)):
@@ -112,7 +112,7 @@ class SegmentCalibrateEvaluator(DatasetEvaluator):
             ]
         )
 
-        if print:
+        if isprint:
             table = AsciiTable(table_data)
             logger.info("\n" + table.table)
 
@@ -122,7 +122,7 @@ class SegmentCalibrateEvaluator(DatasetEvaluator):
             return metric[self.main_metric()]
 
     def wandb_score_table(self):
-        _, table_data = self.mean_score(print=False)
+        _, table_data = self.mean_score(isprint=False)
         return wandb.Table(
             columns=table_data[0],
             data=table_data[1:]

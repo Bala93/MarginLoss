@@ -109,14 +109,14 @@ class MedSegmentTrainer(Trainer):
         metric = self.evaluator.mean_score()
         log_dict.update(metric)
         if phase.lower() == "test":
-            calibrate_metric, calibrate_table_data = self.calibrate_evaluator.mean_score(print=False)
+            calibrate_metric, calibrate_table_data = self.calibrate_evaluator.mean_score(isprint=False)
             log_dict.update(calibrate_metric)
         # log_dict.update(self.logits_evaluator.mean_score())
         # log_dict.update(self.probs_evaluator.mean_score())
         logger.info("{} Epoch[{}]\t{}".format(
             phase, epoch + 1, json.dumps(round_dict(log_dict))
         ))
-        class_table_data = self.evaluator.class_score(print=True, return_dataframe=True)
+        class_table_data = self.evaluator.class_score(isprint=True, return_dataframe=True)
         if phase.lower() == "test":
             logger.info("\n" + AsciiTable(calibrate_table_data).table)
         if self.cfg.wandb.enable:
@@ -136,10 +136,11 @@ class MedSegmentTrainer(Trainer):
                         data=calibrate_table_data[1:]
                     )
                 )
-            # if "test" in phase.lower() and self.cfg.calibrate.visualize:
-            #     fig_reliab, fig_hist = self.calibrate_evaluator.plot_reliability_diagram()
-            #     wandb_log_dict["{}/calibrate_reliability".format(phase)] = fig_reliab
-            #     wandb_log_dict["{}/confidence_histogram".format(phase)] = fig_hist
+            if "test" in phase.lower() and self.cfg.calibrate.visualize:
+                fig_reliab, fig_hist = self.calibrate_evaluator.plot_reliability_diagram()
+                wandb_log_dict["{}/calibrate_reliability".format(phase)] = fig_reliab
+                wandb_log_dict["{}/confidence_histogram".format(phase)] = fig_hist
+                
             wandb.log(wandb_log_dict)    
 
     def train_epoch(self, epoch: int):
@@ -153,8 +154,13 @@ class MedSegmentTrainer(Trainer):
             # compute the time for data loading
             self.data_time_meter.update(time.time() - end)
             inputs, labels = inputs.to(self.device), labels.to(self.device)
+
+            # print (inputs.shape, labels.shape)
+
             # forward
             outputs = self.model(inputs)
+
+            # print (inputs.shape, outputs.shape, labels.shape)
 
             if isinstance(outputs, Dict):
                 outputs = outputs["out"]
@@ -189,7 +195,7 @@ class MedSegmentTrainer(Trainer):
                 self.log_iter_info(i, max_iter, epoch)
             end = time.time()
 
-            #break
+            # break
 
         self.log_epoch_info(epoch)
 
@@ -230,6 +236,8 @@ class MedSegmentTrainer(Trainer):
             # if (i + 1) % self.cfg.log_period == 0:
             #     self.log_iter_info(i, max_iter, epoch, phase)
             end = time.time()
+
+            # break
 
         self.log_eval_epoch_info(epoch, phase)
 

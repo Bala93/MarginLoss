@@ -7,7 +7,7 @@ import numpy as np
 import os
 import glob
 
-CLASSES = ('background','foreground1','foreground2','foreground3','foreground4')
+CLASSES = ('background','foreground1','foreground2','foreground3')#,'foreground4')
 
 class BrainAtlasDataset(Dataset):
     def __init__(self, file_names):
@@ -33,6 +33,7 @@ class BrainAtlasDataset(Dataset):
             image = np.pad(image,pad_width=((0,0),(8,8),(8,8)),mode='constant')
             mask = data["mask"][:][:,:,sliceno]
             mask = np.pad(mask,pad_width=((8,8),(8,8)),mode='constant')
+            mask[mask==4] = 0 # to remove fg4.
 
         return torch.from_numpy(image).float(), torch.from_numpy(mask).long()
 
