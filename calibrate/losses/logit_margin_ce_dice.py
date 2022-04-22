@@ -46,7 +46,7 @@ class LogitMarginDICEL1(nn.Module):
         diff = max_values - inputs
         return diff
 
-    def get_dice(self, inputs, targets, eps = 1e-5):
+    def get_dice(self, inputs, targets, eps = 1e-5, include_background=False):
 
         numclasses = inputs.shape[1]
         targets = targets.unsqueeze(1)
@@ -58,6 +58,10 @@ class LogitMarginDICEL1(nn.Module):
         labels = o.scatter_(1,index=targets,value=1)
 
         reduce_axis = torch.arange(2, len(inputs.shape)).tolist()
+
+        if not include_background:
+            labels = labels[:,1:]
+            inputs = inputs[:,1:]
 
         num = torch.sum(labels * inputs, reduce_axis)
         den = torch.sum(labels, reduce_axis) + torch.sum(inputs, reduce_axis)
