@@ -1,16 +1,18 @@
-from xml.dom.expatbuilder import InternalSubsetExtractor
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from .utils import get_svls_filter_2d
 
-class LogitMarginDICEL1(nn.Module):
+class LogitMarginSVLSL1(nn.Module):
     """Add marginal penalty to logits:
-        CE + DICE + alpha * max(0, max(l^n) - l^n - margin)
+        CE + alpha * max(0, max(l^n) - l^n - margin)
     """
     def __init__(self,
+                 classes=None,
                  margin=10,
                  alpha=1.0,
                  ignore_index=-100,
+                 sigma=1,
                  mu=0,
                  schedule="",
                  max_alpha=100.0,
@@ -25,11 +27,18 @@ class LogitMarginDICEL1(nn.Module):
         self.max_alpha = max_alpha
         self.step_size = step_size
 
-        self.cross_entropy = nn.CrossEntropyLoss()
+        self.cls = torch.tensor(classes)
+        self.cls_idx = torch.arange(self.cls).reshape(1, self.cls).cuda()
+
+        self.svls_layer, self.svls_kernel = get_svls_filter_2d(sigma=sigma, channels=classes)
+        self.svls_kernel = self.svls_kernel.cuda()
+
+
+        # self.cross_entropy = nn.CrossEntropyLoss()
 
     @property
     def names(self):
-        return "loss", "loss_ce", "loss_margin_l1", "loss_dice"
+        return "loss", "loss_ce", "loss_margin_l1"
 
     def schedule_alpha(self, epoch):
         if self.schedule == "add":
@@ -46,27 +55,6 @@ class LogitMarginDICEL1(nn.Module):
         diff = max_values - inputs
         return diff
 
-    def get_dice(self, inputs, targets, eps = 1e-5):
-
-        numclasses = inputs.shape[1]
-        targets = targets.unsqueeze(1)
-
-        sh = list(targets.shape)
-        sh[1] = numclasses
-        
-        o = torch.zeros(size=sh,dtype=inputs.dtype,device=targets.device)
-        labels = o.scatter_(1,index=targets,value=1)
-
-        reduce_axis = torch.arange(2, len(inputs.shape)).tolist()
-
-        num = torch.sum(labels * inputs, reduce_axis)
-        den = torch.sum(labels, reduce_axis) + torch.sum(inputs, reduce_axis)
-        loss = (2 * num + eps) / (den + eps)
-
-        loss = torch.mean(loss)
-
-        return 1 - loss
-
     def forward(self, inputs, targets):
         if inputs.dim() > 2:
             inputs = inputs.view(inputs.size(0), inputs.size(1), -1)  # N,C,H,W => N,C,H*W
@@ -79,14 +67,17 @@ class LogitMarginDICEL1(nn.Module):
             inputs = inputs[index, :]
             targets = targets[index]
 
-        loss_ce = self.cross_entropy(inputs, targets)
-
         diff = self.get_diff(inputs)
         # loss_margin = torch.clamp(diff - self.margin, min=0).mean()
         loss_margin = F.relu(diff-self.margin).mean()
 
-        loss_dice = self.get_dice(inputs, targets)
+        oh_labels = (targets[...,None] == self.cls_idx).permute(0,3,1,2)
+        oh_labels = F.pad(oh_labels.float(), (1,1,1,1), mode='replicate')
 
-        loss = loss_ce + loss_dice + self.alpha * loss_margin
+        svls_labels = self.svls_layer(oh_labels) / self.svls_kernel.sum()
 
-        return loss, loss_ce, loss_margin, loss_dice
+        loss_ce = (-svls_labels * F.log_softmax(inputs, dim=1)).sum(dim=1).mean()
+
+        loss = loss_ce + self.alpha * loss_margin
+
+        return loss, loss_ce, loss_margin
