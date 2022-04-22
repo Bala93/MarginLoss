@@ -56,6 +56,14 @@ class LogitMarginSVLSL1(nn.Module):
         return diff
 
     def forward(self, inputs, targets):
+
+        oh_labels = (targets[...,None] == self.cls_idx).permute(0,3,1,2)
+        oh_labels = F.pad(oh_labels.float(), (1,1,1,1), mode='replicate')
+
+        svls_labels = self.svls_layer(oh_labels) / self.svls_kernel.sum()
+
+        loss_ce = (-svls_labels * F.log_softmax(inputs, dim=1)).sum(dim=1).mean()
+
         if inputs.dim() > 2:
             inputs = inputs.view(inputs.size(0), inputs.size(1), -1)  # N,C,H,W => N,C,H*W
             inputs = inputs.transpose(1, 2)    # N,C,H*W => N,H*W,C
@@ -69,14 +77,7 @@ class LogitMarginSVLSL1(nn.Module):
 
         diff = self.get_diff(inputs)
         # loss_margin = torch.clamp(diff - self.margin, min=0).mean()
-        loss_margin = F.relu(diff-self.margin).mean()
-
-        oh_labels = (targets[...,None] == self.cls_idx).permute(0,3,1,2)
-        oh_labels = F.pad(oh_labels.float(), (1,1,1,1), mode='replicate')
-
-        svls_labels = self.svls_layer(oh_labels) / self.svls_kernel.sum()
-
-        loss_ce = (-svls_labels * F.log_softmax(inputs, dim=1)).sum(dim=1).mean()
+        loss_margin = F.relu(diff-self.margin).mean()       
 
         loss = loss_ce + self.alpha * loss_margin
 
