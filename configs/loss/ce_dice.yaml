@@ -1,0 +1,4 @@
+name : ce_dice
+
+object:
+  _target_ : calibrate.losses.ce_dice.CEDiceLoss

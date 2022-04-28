@@ -9,3 +9,5 @@ from .logit_margin_l1 import LogitMarginL1
 from .spatial_label_smoothing import CELossWithSVLS
 from .logit_margin_ce_dice import LogitMarginDICEL1
 from .spatial_ls_margin import LogitMarginSVLSL1
+from .dice import DiceLoss
+from .ce_dice import CEDiceLoss
