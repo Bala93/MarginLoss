@@ -50,12 +50,13 @@ def shape_metrics(pred_label, label, num_classes):
 class SegmentEvaluator(DatasetEvaluator):
     def __init__(self,
                  classes: Optional[List[str]] = None,
-                 ignore_index: int = -1) -> None:
+                 ignore_index: int = -1,
+                 ishd = False) -> None:
         super().__init__()
         self.classes = classes
         self.num_classes = len(self.classes)
         self.ignore_index = ignore_index
-        self.ishd = False
+        self.ishd = ishd
 
     def num_samples(self):
         return self.nsamples
@@ -179,15 +180,15 @@ class SegmentEvaluator(DatasetEvaluator):
             for i in range(class_acc.shape[0]):
                 data[columns[0]].append(i)
                 data[columns[1]].append(self.classes[i + 1])
-                data[columns[3]].append(class_iou[i])
-                data[columns[2]].append(class_dice[i])
+                data[columns[2]].append(class_iou[i])
+                data[columns[3]].append(class_dice[i])
                 data[columns[4]].append(class_acc[i])
                 data[columns[5]].append(class_hd[i])
                 
             data[columns[0]].append(None)
             data[columns[1]].append("mean")
-            data[columns[3]].append(np.mean(class_iou))
-            data[columns[2]].append(np.mean(class_dice))
+            data[columns[2]].append(np.mean(class_iou))
+            data[columns[3]].append(np.mean(class_dice))
             data[columns[4]].append(np.mean(class_acc))
             data[columns[5]].append(np.mean(class_hd))
 

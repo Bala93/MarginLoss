@@ -54,3 +54,17 @@ def round_dict(d, decimals=5):
         if isinstance(ret[key], float):
             ret[key] = round(ret[key], decimals)
     return ret
+
+def bratspostprocess(outputs, labels):
+    
+    def process(mask):
+        nmask = torch.zeros(size=mask.shape, dtype=mask.dtype)
+        nmask[mask > 0 ] = 3
+        nmask[torch.logical_or(mask == 2 , mask == 3)] = 1
+        nmask[mask == 2] = 2
+        return nmask 
+    
+    noutputs = process(outputs)
+    nlabels = process(labels)
+
+    return noutputs, nlabels

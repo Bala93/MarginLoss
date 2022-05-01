@@ -29,6 +29,7 @@ class Trainer:
         self.cfg = cfg
         self.work_dir = self.cfg.work_dir
         self.device = torch.device(self.cfg.device)
+        self.isdisp = self.cfg.train.disp # for tensorboard valid data
         self.build_data_loader()
         self.build_model()
         self.build_solver()
@@ -287,7 +288,8 @@ class Trainer:
             logger.info("=" * 20)
             self.train_epoch(epoch)
             val_loss, val_score = self.eval_epoch(self.val_loader, epoch, phase="Val")
-            self.disp_epoch(self.display_loader, epoch, phase="Val")
+            if self.isdisp:
+                self.disp_epoch(self.display_loader, epoch, phase="Val")
             
             # run lr scheduler
             self.scheduler.step()
@@ -322,7 +324,7 @@ class Trainer:
                     "Val/best_calibrate_score_table": self.calibrate_evaluator.wandb_score_table()
                 })
 
-            #break
+            # break
 
         if self.cfg.wandb.enable:
             copyfile(

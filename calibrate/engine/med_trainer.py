@@ -160,10 +160,9 @@ class MedSegmentTrainer(Trainer):
             # forward
             outputs = self.model(inputs)
 
-            # print (inputs.shape, outputs.shape, labels.shape)
-
             if isinstance(outputs, Dict):
                 outputs = outputs["out"]
+                
             loss = self.loss_func(outputs, labels)
             if isinstance(loss, tuple):
                 # For compounding loss, make sure the first term is the overall loss
@@ -183,7 +182,7 @@ class MedSegmentTrainer(Trainer):
             self.loss_meter.update(loss, inputs.size(0))
             predicts = F.softmax(outputs, dim=1)
             
-            pred_labels = torch.argmax(outputs, dim=1)
+            pred_labels = torch.argmax(predicts, dim=1)
             self.evaluator.update(
                 pred_labels.detach().cpu().numpy(),
                 labels.detach().cpu().numpy()

@@ -22,6 +22,8 @@ from calibrate.utils import (
 from calibrate.utils.file_io import mkdir
 from calibrate.utils.torch_helper import entropy, to_numpy, get_lr
 from .tester import Tester
+from calibrate.utils.misc import bratspostprocess
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,8 @@ class MedSegmentTester(Tester):
         self.num_classes = self.cfg.model.num_classes
         self.evaluator = SegmentEvaluator(
             self.test_loader.dataset.classes,
-            ignore_index=255
+            ignore_index=255,
+            ishd=True
         )
         self.calibrate_evaluator = SegmentCalibrateEvaluator(
             self.num_classes,
@@ -51,7 +54,7 @@ class MedSegmentTester(Tester):
 
         end = time.time()
         # fsave = open(osp.join(self.work_dir, "segment_{}_calibrate.txt".format(self.cfg.loss.name)), "w")
-        for i, (inputs, labels) in enumerate(data_loader):
+        for i, (inputs, labels) in enumerate(tqdm(data_loader)):
             inputs, labels = inputs.to(self.device), labels.to(self.device)
             # forward
             outputs = self.model(inputs)
@@ -60,6 +63,10 @@ class MedSegmentTester(Tester):
             # metric
             predicts = F.softmax(outputs, dim=1)
             pred_labels = torch.argmax(predicts, dim=1)
+            
+            ## to convert the brats to the metric setup
+            if self.cfg.data.name == 'brain':
+                bratspostprocess(pred_labels, labels)
             
             self.evaluator.update(
                 to_numpy(pred_labels),
@@ -78,6 +85,7 @@ class MedSegmentTester(Tester):
             # if (i + 1) % self.cfg.log_period == 0:
             #     self.log_iter_info(i, max_iter, epoch, phase)
             end = time.time()
+            # logger.info("\n" + "Processing {}".format(i))
         #     if self.cfg.test.save_logits:
         #         logits_save_dir = osp.join(self.work_dir, "segment_{}".format(self.cfg.loss.name))
         #         mkdir(logits_save_dir)
@@ -106,6 +114,20 @@ class MedSegmentTester(Tester):
             phase, json.dumps(round_dict(log_dict))
         ))
         class_table_data = self.evaluator.class_score(isprint=True, return_dataframe=True)
+        
+        class_hd_list = class_table_data['hd'].to_list()[:-1]
+        class_dice_list = class_table_data['dsc'].to_list()[:-1]
+        class_name_list = class_table_data['Class'].to_list()[:-1]
+        
+        for ii in range(len(class_name_list)):
+            key = 'dsc-{}'.format(class_name_list[ii])
+            val = class_dice_list[ii]
+            log_dict.update({key:val})    
+            
+            key = 'hd-{}'.format(class_name_list[ii])
+            val = class_hd_list[ii]
+            log_dict.update({key:val})    
+        
         logger.info("\n" + AsciiTable(calibrate_table_data).table)
         if self.cfg.wandb.enable:
             wandb_log_dict = {}

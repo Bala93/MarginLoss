@@ -150,7 +150,7 @@ class SegmentTrainer(Trainer):
         end = time.time()
         for i, (inputs, labels) in enumerate(self.train_loader):
             # compute the time for data loading
-            self.data_time_meter.update(time.time() - end)
+            self.data_time_meter.update(time.time() - end) 
             inputs, labels = inputs.to(self.device), labels.to(self.device)
             # forward
             outputs = self.model(inputs)
