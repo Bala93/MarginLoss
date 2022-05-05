@@ -1,0 +1,15 @@
+name: transunet
+
+img_size: 192
+num_classes: 5
+vit_patches_size: 16
+type : 'R50-ViT-B_16'
+path: '/home/ar88770/MarginLoss/misc/imagenet21k_R50+ViT-B_16.npz'
+
+object:
+  _target_: calibrate.net.vit_seg_modeling.transfomer_model
+  model_name: ${model.type}
+  img_size: ${model.img_size}
+  vit_patches_size: ${model.vit_patches_size}
+  n_classes: ${model.num_classes}
+  model_path: ${model.path}
