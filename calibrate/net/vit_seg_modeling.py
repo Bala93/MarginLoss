@@ -451,12 +451,13 @@ CONFIGS = {
 }
 
 
-def transfomer_model(model_name, img_size, vit_patches_size, n_classes, model_path):
+def transfomer_model(model_name, img_size, vit_patches_size, n_classes, model_path=None):
     
     config_vit = CONFIGS[model_name]
     config_vit.patches.grid = (int(img_size / vit_patches_size), int(img_size / vit_patches_size))
     config_vit.n_classes = n_classes
     net = VisionTransformer(config_vit, img_size=img_size, num_classes=n_classes)
-    net.load_from(weights=np.load(model_path))
+    if not model_path is None:
+        net.load_from(weights=np.load(model_path))
     
     return net

@@ -1,0 +1,9 @@
+name: unetpp
+
+num_classes: 3
+num_inp_channels: 3
+
+object:
+  _target_: segmentation_models_pytorch.UnetPlusPlus
+  in_channels: ${model.num_inp_channels}
+  classes: ${model.num_classes}
