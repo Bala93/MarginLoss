@@ -23,39 +23,50 @@ in_channels = 4
 nclasses = 4
 method_names =['ce','ce_dice','penalty','focal','ls','svls','margin']
 
+
 files = glob.glob('{}/*.h5'.format(data_root))
-models_path = [model_path_ce, model_path_penalty, model_path_focal, model_path_ls, model_path_margin]
+models_path = [model_path_ce, model_path_ce_dice, model_path_focal, model_path_penalty, model_path_ls, model_path_svls, model_path_margin]
 model = UNet(input_channels=in_channels, num_classes=nclasses)
+gpuid = 5
 
 for key, model_path in zip(method_names,models_path):
 
-    checkpoint = torch.load(model_path)["state_dict"]
+    checkpoint = torch.load(model_path,map_location=torch.device('cpu'))["state_dict"]
     checkpoint = dict((key[7:] if "module" in key else key, value)for (key, value) in checkpoint.items())
     model.load_state_dict(checkpoint)
-    model = model.to('cuda:4')
+    model = model.to('cuda:{}'.format(gpuid))
     
     metrics_dict = {"fname":[],"sno":[], "dsc":[],"hd":[],"ece":[],"cece":[]}
     savedir = os.path.dirname(model_path)
     metricspath = os.path.join(savedir, 'metrics.csv')
 
+    resultsdir = os.path.join(savedir, 'results')
+
+    if not os.path.exists(resultsdir):
+        os.mkdir(resultsdir)
+
     for fpath in tqdm(files):
 
         fname = os.path.basename(fpath)
         
+        resultspath = os.path.join(resultsdir, fname)
+        
         with h5py.File(fpath, 'r') as hf:
             volimg = hf['img'][:]
             volmask = hf['mask'][:]
-            
+            volimg = np.pad(volimg,pad_width=((0,0),(0,0),(8,8),(8,8)),mode='constant')
+            volmask = np.pad(volmask,pad_width=((0,0),(8,8),(8,8)),mode='constant')
+        
+        volres = np.empty(volmask.shape)
+        
         for sno in range(volimg.shape[1]):
             
             img = volimg[:,sno,:,:] 
-            img = np.pad(img,pad_width=((0,0),(8,8),(8,8)),mode='constant')
             imgT = torch.from_numpy(img)
             imgT = imgT.unsqueeze(0)
-            imgT = imgT.cuda('cuda:4')
+            imgT = imgT.cuda('cuda:{}'.format(gpuid))
             
             mask = volmask[sno,:,:]            
-            mask = np.pad(mask,pad_width=((8,8),(8,8)),mode='constant')
 
             target = np.expand_dims(mask,axis=0)
             targetT = torch.from_numpy(target)
@@ -65,6 +76,9 @@ for key, model_path in zip(method_names,models_path):
             
             outputconf = F.softmax(predT,dim=1).numpy()
             output = np.argmax(outputconf[0],axis=0)
+            
+            volres[sno] = output
+            
             dsc, hd = shape_metrics(output, mask, nclasses)
         
             metrics_dict['fname'].append(fname)
@@ -73,6 +87,9 @@ for key, model_path in zip(method_names,models_path):
             metrics_dict['hd'].append(hd)
             metrics_dict['ece'].append(ece)
             metrics_dict['cece'].append(cece)
-        
+    
+        with h5py.File(resultspath, 'w') as hf:
+            hf['mask'] = volres 
+                
     df_metrics = pd.DataFrame(metrics_dict)
     df_metrics.to_csv(metricspath)

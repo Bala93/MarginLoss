@@ -24,23 +24,28 @@ nclasses = 4
 method_names =['ce','ce_dice','penalty','focal','ls','svls','margin']
 
 files = glob.glob('{}/*.h5'.format(data_root))
-models_path = [model_path_ce, model_path_penalty, model_path_focal, model_path_ls, model_path_margin]
+models_path = [model_path_ce, model_path_ce_dice, model_path_focal, model_path_penalty, model_path_ls, model_path_svls, model_path_margin]
 model = UNet(input_channels=in_channels, num_classes=nclasses)
 
 for key, model_path in zip(method_names,models_path):
 
-    checkpoint = torch.load(model_path)["state_dict"]
+    checkpoint = torch.load(model_path,map_location=torch.device('cpu'))["state_dict"]
     checkpoint = dict((key[7:] if "module" in key else key, value)for (key, value) in checkpoint.items())
     model.load_state_dict(checkpoint)
-    model = model.to('cuda:4')
+    model = model.to('cuda:5')
     
     metrics_dict = {"fname":[],"dsc":[],"hd":[],"ece":[],"cece":[]}
     savedir = os.path.dirname(model_path)
     metricspath = os.path.join(savedir, 'metrics.csv')
+    resultsdir = os.path.join(savedir, 'results')
+    
+    if not os.path.exists(resultsdir):
+        os.mkdir(resultsdir)
 
     for fpath in tqdm(files):
 
         fname = os.path.basename(fpath)
+        resultspath = os.path.join(resultsdir, fname)
         
         with h5py.File(fpath, 'r') as hf:
             img = hf['img'][:]
@@ -51,7 +56,7 @@ for key, model_path in zip(method_names,models_path):
 
         imgT = torch.from_numpy(img)
         imgT = imgT.unsqueeze(0).unsqueeze(0)
-        imgT = imgT.cuda('cuda:4')
+        imgT = imgT.cuda('cuda:5')
 
         target = np.expand_dims(mask,axis=0)
         targetT = torch.from_numpy(target)
@@ -61,6 +66,10 @@ for key, model_path in zip(method_names,models_path):
         
         outputconf = F.softmax(predT,dim=1).numpy()
         output = np.argmax(outputconf[0],axis=0)
+        
+        with h5py.File(resultspath, 'w') as hf:
+            hf['mask'] = output
+                    
         dsc, hd = shape_metrics(output, mask, nclasses)
     
         metrics_dict['fname'].append(fname)
