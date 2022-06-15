@@ -1,0 +1,9 @@
+name: attunet
+
+num_classes: 3
+num_inp_channels: 3
+
+object:
+  _target_: calibrate.net.attunet.AttU_Net
+  img_ch: ${model.num_inp_channels}
+  output_ch: ${model.num_classes}
