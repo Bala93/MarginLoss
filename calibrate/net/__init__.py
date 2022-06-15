@@ -1,1 +1,2 @@
 from .temperature_scaling import ModelWithTemperature
+from .local_temperature_scaling import LTS_CamVid_With_Image

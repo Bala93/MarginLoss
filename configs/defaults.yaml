@@ -21,6 +21,7 @@ train:
   resume: False
   keep_checkpoint_num: 1
   keep_checkpoint_interval: 0
+  disp: False
 calibrate:
   num_bins: 15
   visualize: False
@@ -28,5 +29,7 @@ test:
   checkpoint: ""
   save_logits: False
   post_temperature: False
+  is_dilate: False
+  lts_path: ""
 wandb:
   enable: False

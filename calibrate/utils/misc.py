@@ -5,6 +5,8 @@ import random
 from datetime import datetime
 import torch
 from copy import deepcopy
+import torch.nn as nn
+import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 
@@ -68,3 +70,34 @@ def bratspostprocess(outputs, labels):
     nlabels = process(labels)
 
     return noutputs, nlabels
+
+
+class BND(nn.Module):
+
+    def __init__(self, device):
+        super(BND,self).__init__()
+
+        # HSOBEL_WEIGHTS = np.array([[1, 2, 1],[0, 0, 0],[-1, -2, -1]]) / 4.0
+        HSOBEL_WEIGHTS = np.array([[0, 1, 0],[0, 0, 0],[0, -1, 0]])
+        HSOBEL_WEIGHTS = HSOBEL_WEIGHTS.astype(np.float64)
+        VSOBEL_WEIGHTS = HSOBEL_WEIGHTS.T
+
+        HSOBEL_WEIGHTS = torch.from_numpy(HSOBEL_WEIGHTS)
+        VSOBEL_WEIGHTS = torch.from_numpy(VSOBEL_WEIGHTS)
+
+        HSOBEL_WEIGHTS = HSOBEL_WEIGHTS.to(device)
+        VSOBEL_WEIGHTS = VSOBEL_WEIGHTS.to(device)
+
+        self.HSOBEL_WEIGHTS = HSOBEL_WEIGHTS.unsqueeze(0).unsqueeze(0)
+        self.VSOBEL_WEIGHTS = VSOBEL_WEIGHTS.unsqueeze(0).unsqueeze(0)
+
+    def forward(self,img):
+        
+        img = img.unsqueeze(1).double()
+        edge_torch_H = F.conv2d(img,self.HSOBEL_WEIGHTS,padding=1)
+        edge_torch_V = F.conv2d(img,self.VSOBEL_WEIGHTS,padding=1)
+        edge_abs = torch.sqrt(edge_torch_H **2 + edge_torch_V **2 )
+        
+        edge = edge_abs > 0
+        
+        return edge

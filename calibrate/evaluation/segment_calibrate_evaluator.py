@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class SegmentCalibrateEvaluator(DatasetEvaluator):
-    def __init__(self, num_classes, num_bins=15, ignore_index:  int = -1, device="cuda:0") -> None:
+    def __init__(self, num_classes, num_bins=15, ignore_index:  int = -1, device="cuda:0", is_dilate = False) -> None:
         self.num_classes = num_classes
         self.num_bins = num_bins
         self.ignore_index = ignore_index
@@ -28,7 +28,7 @@ class SegmentCalibrateEvaluator(DatasetEvaluator):
         self.cece_criterion = ClasswiseECELoss(self.num_bins).to(self.device)
 
         ## Dilation kernel for ECE
-        self.is_dilate = False ## Can be used as argument.
+        self.is_dilate = is_dilate ## Can be used as argument.
 
         if self.is_dilate:
             kernel = np.array([ [1, 1, 1],[1, 1, 1], [1, 1, 1]], dtype=np.float32)
@@ -62,6 +62,7 @@ class SegmentCalibrateEvaluator(DatasetEvaluator):
         if self.is_dilate:
             ## Dilation operation ECE
             labels = (labels > 0).float()
+            print (labels.shape)
             labels = torch.clamp(torch.nn.functional.conv2d(labels, self.kernel, padding=(1, 1)), 0, 1).long()
 
         logits = torch.einsum("ncxy->nxyc", logits)
