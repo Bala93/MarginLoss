@@ -10,29 +10,34 @@ import glob
 CLASSES = ('background','foreground1','foreground2','foreground3')
 
 class CardiacDataset(Dataset):
+    
     def __init__(self, file_names):
         self.file_names = file_names
         self.classes = CLASSES
+        self.info = []
+
+        for fpath in self.file_names:
+            with h5py.File(fpath, 'r') as hf:
+                vol = hf['mask'][:]
+            for ii in range(vol.shape[-1]):
+                self.info.append([fpath,ii])
 
     def __len__(self):
-        return len(self.file_names)
+        return len(self.info)
 
     def __getitem__(self,idx):
-        img_file_name = self.file_names[idx]
+        
+        img_file_name, sliceno  = self.info[idx]
 
         with h5py.File(img_file_name, 'r') as data:
-            image = data["img"][:]
-            image = np.pad(image,pad_width=((5,5),(5,5)),mode='constant')
 
-            mask = data["mask"][:]
-            mask = np.pad(mask,pad_width=((5,5),(5,5)),mode='constant')
-
-            mask = mask.astype(np.uint8)
-
-            image = np.expand_dims(image,axis=0)
-            # print (image.shape, mask.shape)
+            image = data["img"][:][None,16:208,16:208,sliceno]
+            mask = data["mask"][:][:,:,sliceno][16:208,16:208]
+            
+        # print (image.shape, mask.shape)
 
         return torch.from_numpy(image).float(), torch.from_numpy(mask).long()
+
 
 
 def get_train_val_loader(data_root, batch_size=32, num_workers=8, pin_memory=True):
@@ -56,9 +61,9 @@ def get_train_val_loader(data_root, batch_size=32, num_workers=8, pin_memory=Tru
 
 def get_test_loader(data_root, batch_size=32, num_workers=8, pin_memory=True):
 
-    test_path = os.path.join(data_root, 'valid')
+    test_path = os.path.join(data_root, 'test')
     test_files = glob.glob(test_path + '/*')
     test_dataset = CardiacDataset(test_files)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
     return test_loader
