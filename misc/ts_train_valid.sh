@@ -1,7 +1,0 @@
-python ts_train_valid.py --seg-model "ce" --dataset-type "mrbrains"
-python ts_train_valid.py --seg-model "ce_dice" --dataset-type "mrbrains"
-python ts_train_valid.py --seg-model "focal" --dataset-type "mrbrains"
-python ts_train_valid.py --seg-model "penalty" --dataset-type "mrbrains"
-python ts_train_valid.py --seg-model "ls" --dataset-type "mrbrains"
-python ts_train_valid.py --seg-model "svls" --dataset-type "mrbrains"
-python ts_train_valid.py --seg-model "margin" --dataset-type "mrbrains"
