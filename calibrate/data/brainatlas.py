@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset, DataLoader
 import torch
-
+# from skimage.transform import resize
 
 import h5py
 import numpy as np
@@ -30,10 +30,17 @@ class BrainAtlasDataset(Dataset):
         with h5py.File(img_file_name, 'r') as data:
 
             image = data["img"][:][:,:,:,sliceno]
-            image = np.pad(image,pad_width=((0,0),(8,8),(8,8)),mode='constant')
+            # image = np.pad(image,pad_width=((0,0),(8,8),(8,8)),mode='constant')
             mask = data["mask"][:][:,:,sliceno]
-            mask = np.pad(mask,pad_width=((8,8),(8,8)),mode='constant')
+            # mask = np.pad(mask,pad_width=((8,8),(8,8)),mode='constant')
+            
+            # print (image.shape, mask.shape)
+            
+            image = image[:,24:216,24:216] # instead of resizing, cropping would be better, to avoid class imbalance. 
+            mask = mask[24:216,24:216] # 80:240,80:240 (160), 64:256,64:256 (192), 48:272,48:272 (224), 32:288,32:288 (256)            
             mask[mask==4] = 0 # to remove fg4.
+            
+            # print (image.shape, mask.shape)
 
         return torch.from_numpy(image).float(), torch.from_numpy(mask).long()
 
@@ -63,6 +70,6 @@ def get_test_loader(data_root, batch_size=32, num_workers=8, pin_memory=True):
     test_path = os.path.join(data_root, 'test')
     test_files = glob.glob(test_path + '/*')
     test_dataset = BrainAtlasDataset(test_files)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
     return test_loader

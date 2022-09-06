@@ -18,7 +18,7 @@ class BrainDataset(Dataset):
         for fpath in self.file_names:
             with h5py.File(fpath, 'r') as hf:
                 vol = hf['mask'][:]
-            for ii in range(vol.shape[0]):
+            for ii in range(vol.shape[-1]):
                 self.info.append([fpath,ii])
 
     def __len__(self):
@@ -29,10 +29,16 @@ class BrainDataset(Dataset):
 
         with h5py.File(img_file_name, 'r') as data:
 
-            image = data["img"][:][:,sliceno,:,:]
-            image = np.pad(image,pad_width=((0,0),(8,8),(8,8)),mode='constant')
-            mask = data["mask"][:][sliceno,:,:]
-            mask = np.pad(mask,pad_width=((8,8),(8,8)),mode='constant')
+            image = data["img"][:][:,:,sliceno,:]
+            image = np.transpose(image, [2,0,1])
+            mask = data["mask"][:][:,:,sliceno]
+            
+            # image = np.pad(image,pad_width=((0,0),(8,8),(8,8)),mode='constant')
+            # mask = np.pad(mask,pad_width=((8,8),(8,8)),mode='constant')
+            # image = data["img"][:][:,sliceno,24:216,24:216]
+            # image = np.pad(image,pad_width=((0,0),(8,8),(8,8)),mode='constant')
+            # mask = data["mask"][:][sliceno,24:216,24:216]
+            # mask = np.pad(mask,pad_width=((8,8),(8,8)),mode='constant')
 
         return torch.from_numpy(image).float(), torch.from_numpy(mask).long()
 
@@ -62,6 +68,6 @@ def get_test_loader(data_root, batch_size=32, num_workers=8, pin_memory=True):
     test_path = os.path.join(data_root, 'test')
     test_files = glob.glob(test_path + '/*')
     test_dataset = BrainDataset(test_files)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
     return test_loader

@@ -34,6 +34,7 @@ class Tester:
 
     def build_data_loader(self) -> None:
         # data pipeline
+        self.train_loader, self.val_loader, self.display_loader = instantiate(self.cfg.data.object.trainval)
         self.test_loader = instantiate(self.cfg.data.object.test)
 
     def build_model(self, checkpoint: Optional[str] = "") -> None:
@@ -113,8 +114,10 @@ class Tester:
     def log_eval_epoch_info(self, phase="Val"):
         log_dict = {}
         log_dict["samples"] = self.evaluator.num_samples()
-        classify_metric, classify_table_data = self.evaluator.mean_score(print=False)
+        classify_metric, classify_table_data, conf_mtx = self.evaluator.mean_score(print=False)
+        
         log_dict.update(classify_metric)
+        
         calibrate_metric, calibrate_table_data = self.calibrate_evaluator.mean_score(print=False)
         log_dict.update(calibrate_metric)
         logger.info("{} Epoch\t{}".format(

@@ -210,8 +210,10 @@ class Trainer:
             # compute the time for data loading
             self.data_time_meter.update(time.time() - end)
             inputs, labels = inputs.to(self.device), labels.to(self.device)
+            # print (inputs.shape, labels.shape)
             # forward
             outputs = self.model(inputs)
+            # print (outputs, labels)
             loss = self.loss_func(outputs, labels)
             if isinstance(loss, tuple):
                 loss_total = loss[0]
@@ -252,7 +254,7 @@ class Trainer:
         max_iter = len(data_loader)
         end = time.time()
         for i, (inputs, labels) in enumerate(data_loader):
-            inputs, labels = inputs.to(self.device), labels.to(self.device)
+            inputs, labels = inputs.to(self.device), labels[:,0].to(self.device)
             # forward
             outputs = self.model(inputs)
             if post_temp:

@@ -155,7 +155,7 @@ class MedSegmentTrainer(Trainer):
             self.data_time_meter.update(time.time() - end)
             inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-            # print (inputs.shape, labels.shape)
+            # print (inputs.shape, torch.unique(labels))
 
             # forward
             outputs = self.model(inputs)
@@ -182,6 +182,9 @@ class MedSegmentTrainer(Trainer):
             self.loss_meter.update(loss, inputs.size(0))
             predicts = F.softmax(outputs, dim=1)
             
+            if self.cfg.model.name == 'nnunet':
+                predicts = predicts[:,0]
+                
             pred_labels = torch.argmax(predicts, dim=1)
             self.evaluator.update(
                 pred_labels.detach().cpu().numpy(),
@@ -210,6 +213,7 @@ class MedSegmentTrainer(Trainer):
             inputs, labels = inputs.to(self.device), labels.to(self.device)
             # forward
             outputs = self.model(inputs)
+            # print (outputs.shape)
             if isinstance(outputs, Dict):
                 outputs = outputs["out"]
             loss = self.loss_func(outputs, labels)

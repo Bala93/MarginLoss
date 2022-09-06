@@ -11,7 +11,7 @@ from hydra.utils import instantiate
 import wandb
 from terminaltables.ascii_table import AsciiTable
 from typing import Optional
-from calibrate.net import ModelWithTemperature, LTS_CamVid_With_Image
+from calibrate.net import ModelWithTemperature, LTS_CamVid_With_Image, Temperature_Scaling, LTS_LW
 # from calibrate.losses import LabelSmoothConstrainedLoss
 from calibrate.evaluation import (
     AverageMeter, LossMeter, SegmentEvaluator, SegmentCalibrateEvaluator
@@ -26,6 +26,7 @@ from calibrate.utils.misc import bratspostprocess
 from tqdm import tqdm
 from torch import nn
 from calibrate.evaluation.metrics import ECELoss
+from calibrate.net.temperature_scaling import Temperature_Scaling, Local_Temperature_Scaling
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ class MedSegmentTester(Tester):
         )
 
     @torch.no_grad()
-    def eval_epoch(self, data_loader, phase="Val",post_temp=False):
+    def eval_epoch(self, data_loader, phase="Val",post_temp=False,ts_type='ts'):
         self.reset_meter()
         self.model.eval()
 
@@ -65,7 +66,13 @@ class MedSegmentTester(Tester):
                 outputs = outputs["out"]
                 
             if post_temp:
-                outputs = self.lts_temp_model(outputs, inputs, self.device)
+                if ts_type == 'grid':
+                    # outputs = outputs / self.temperature/
+                    outputs = self.ts_model(outputs, inputs, self.device)
+                elif ts_type == 'ts':
+                    outputs = self.ts_model(outputs)
+                elif ts_type == 'lts':
+                    outputs = self.ts_model(outputs,inputs, self.device)
             # metric
             predicts = F.softmax(outputs, dim=1)
             pred_labels = torch.argmax(predicts, dim=1)
@@ -164,10 +171,11 @@ class MedSegmentTester(Tester):
         
         T = 0.1
         
-        nll_criterion = nn.CrossEntropyLoss() #ECELoss()
+        nll_criterion = nn.CrossEntropyLoss() 
+        #ECELoss()
         nll_best = 1e10
         
-        niter = int(1 * len(data_loader))
+        # niter = len(data_loader) 
         
         for j in tqdm(range(100)):
             
@@ -175,23 +183,20 @@ class MedSegmentTester(Tester):
             cnt = 0
             
             for i, (inputs, labels) in enumerate(data_loader):
-                inputs, targets = inputs.to(self.device), labels.to(self.device)
+                inputs, targets = inputs.to(self.device), labels.to(self.device)                                 
                 
-                for idx in range(inputs.shape[0]):
-                    inps,labels = inputs[idx:idx+1], targets[idx:idx+1]
-                    
-                    logits = self.model(inps)
-                    
-                    if isinstance(logits, Dict):
-                        logits = logits["out"]
-                        
-                    logits = logits / T
-                                    
-                    nll_post += nll_criterion(logits, labels).detach().cpu().numpy()        
-                    cnt  += 1
+                logits = self.model(inputs)
                 
-                if i == niter:
-                    break
+                if isinstance(logits, Dict):
+                    logits = logits["out"]
+                    
+                logits = logits / T
+                                
+                nll_post += nll_criterion(logits, targets).detach().cpu().numpy()        
+                cnt  += 1
+                
+                # if i == niter:
+                #     break
                     
             nll_post_mean = nll_post / cnt
             
@@ -203,6 +208,68 @@ class MedSegmentTester(Tester):
             
         return postT
 
+    def find_best_temperature_optimize(self, data_loader):
+        
+        self.model.eval()
+        
+        nll_criterion = nn.CrossEntropyLoss() 
+        
+        nll_pre = 0
+        
+        ## before temperature scaling
+        for i, (inputs, labels) in enumerate(data_loader):
+            inputs, targets = inputs.to(self.device), labels.to(self.device)                                 
+            logits = self.model(inputs)
+            
+            if isinstance(logits, Dict):
+                logits = logits["out"]
+                            
+            nll_pre += nll_criterion(logits, targets).detach().cpu().numpy()        
+
+        nll_best = nll_pre / len(data_loader)
+        
+        # temp_model = Temperature_Scaling().to(self.device)
+        temp_model = Local_Temperature_Scaling(input_channels=1, num_classes=4).to(self.device)
+        ## optimizing for temperature
+        optimizer =  torch.optim.Adam(temp_model.parameters(), lr=1e-4)
+        
+        for j in tqdm(range(50)):
+            
+            # update
+            for i, (inputs, labels) in enumerate(data_loader):
+                inputs, targets = inputs.to(self.device), labels.to(self.device)                                 
+                
+                logits = temp_model(self.model(inputs), inputs,self.device)
+                
+                if isinstance(logits, Dict):
+                    logits = logits["out"]
+                    
+                # output = logits / temperature
+                loss = nll_criterion(logits, targets)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+             
+            # after temperature scaling
+            nll_post = 0
+            for i, (inputs, labels) in enumerate(data_loader):
+                inputs, targets = inputs.to(self.device), labels.to(self.device)                                 
+                logits = temp_model(self.model(inputs), inputs, self.device)
+                
+                if isinstance(logits, Dict):
+                    logits = logits["out"]
+                                
+                nll_post += nll_criterion(logits, targets).detach().cpu().numpy()        
+   
+            nll_post_mean = nll_post / len(data_loader)
+            
+            if nll_post_mean < nll_best:
+                nll_best = nll_post_mean
+            
+            # postT = temp_model.get_temperature()
+                        
+        return temp_model
+
 
     def test(self):
         logger.info(
@@ -210,12 +277,23 @@ class MedSegmentTester(Tester):
         )
         # temperature = 1
         if self.cfg.test.post_temperature:
-            self.lts_temp_model = LTS_CamVid_With_Image(input_channels=self.cfg.model.num_inp_channels, 
-                                                   num_classes=self.cfg.model.num_classes)
-            self.lts_temp_model.load_state_dict(torch.load(self.cfg.test.lts_path)['state_dict'])
-            self.lts_temp_model = self.lts_temp_model.to(self.device)
-            # temperature = self.find_best_temperature(self.val_loader)
-            # if self.cfg.wandb.enable:
-            #     wandb.log({'T':temperature})
+            if self.cfg.test.ts_type == 'ts':
+                                
+                self.ts_model = Temperature_Scaling()
+                self.ts_model.load_state_dict(torch.load(self.cfg.test.ts_path)['state_dict'])
+                self.ts_model = self.ts_model.to(self.device)
+            
+            if self.cfg.test.ts_type == 'lts':
+                                
+                self.ts_model = LTS_CamVid_With_Image(input_channels=self.cfg.model.num_inp_channels, 
+                                                    num_classes=self.cfg.model.num_classes)
+                self.ts_model.load_state_dict(torch.load(self.cfg.test.ts_path)['state_dict'])
+                self.ts_model = self.ts_model.to(self.device)
+                
+            if self.cfg.test.ts_type == 'grid':
+                # self.temperature = self.find_best_temperature(self.val_loader)
+                self.ts_model = self.find_best_temperature_optimize(self.val_loader)
+                # if self.cfg.wandb.enable:
+                #     wandb.log({'T':self.temperature})
         
-        self.eval_epoch(self.test_loader, phase="Test",post_temp=self.cfg.test.post_temperature)
+        self.eval_epoch(self.test_loader, phase="Test",post_temp=self.cfg.test.post_temperature, ts_type = self.cfg.test.ts_type)

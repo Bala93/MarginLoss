@@ -32,6 +32,48 @@ def intersect_and_union(pred_label, label, num_classes, ignore_index):
 
     return area_intersect, area_union, area_pred_label, area_label
 
+
+# def intersect_and_union_brats(pred_label, label, num_classes, ignore_index):
+    
+#     def process(mask,cno):
+        
+#         nmask = np.zeros(shape=mask.shape, dtype=mask.dtype)
+        
+#         if cno == 1:
+#             nmask[np.logical_or(mask == 2 , mask == 3)] = 1
+#         if cno == 2:
+#             nmask[mask == 2] = 2
+#         if cno == 3:
+#             nmask[mask > 0 ] = 3
+
+#         return nmask 
+    
+#     area_intersect = []
+#     area_pred_label = []
+#     area_label = []
+#     area_union = []
+    
+#     for ii in range(num_classes):        
+        
+#         mask = (label != ignore_index)
+#         pred_label = process(pred_label,ii)
+#         label = process(mask,ii)
+
+#         intersect = pred_label[pred_label == label]
+#         area_intersect, _ = np.histogram(
+#             intersect, bins=np.arange(num_classes + 1)
+#         )
+#         area_pred_label, _ = np.histogram(
+#             pred_label, bins=np.arange(num_classes + 1)
+#         )
+#         area_label, _ = np.histogram(
+#             label, bins=np.arange(num_classes + 1)
+#         )
+#         area_union = area_pred_label + area_label - area_intersect
+
+#     return area_intersect, area_union, area_pred_label, area_label
+
+
 def shape_metrics(pred_label, label, num_classes):
 
     hd = []
@@ -40,9 +82,12 @@ def shape_metrics(pred_label, label, num_classes):
         pred_bw = pred_label == cls
         label_bw = label == cls
         if np.sum(pred_bw) & np.sum(label_bw):
-            hd.append(binary.hd(pred_bw, label_bw))
-        else:
+            # hd.append(binary.hd95(pred_bw, label_bw))
+            hd.append(binary.asd(pred_bw, label_bw))
+        elif np.sum(label_bw):
             hd.append(0)
+        else:
+            hd.append(1)
 
     return hd
 
