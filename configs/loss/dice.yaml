@@ -1,5 +1,0 @@
-name : dice
-
-object:
-  _target_ : calibrate.losses.DiceLoss
-  
