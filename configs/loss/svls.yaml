@@ -3,7 +3,7 @@ numclasses: 4
 # ignore_index: -100
 
 object:
-  _target_: calibrate.losses.CELossWithSVLS
+  _target_: calibrate.losses.CELossWithSVLS_2D
   classes: ${loss.numclasses}
   # ignore_index: ${loss.ignore_index}
   # reduction: mean

@@ -30,6 +30,7 @@ test:
   save_logits: False
   post_temperature: False
   is_dilate: False
-  lts_path: ""
+  ts_type: ""
+  ts_path: ""
 wandb:
   enable: False

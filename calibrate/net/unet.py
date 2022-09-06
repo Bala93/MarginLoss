@@ -83,11 +83,13 @@ class UNet(nn.Module):
         if add_output:
             self.conv_final = nn.Conv2d(up_filter_sizes[0], num_classes, padding)
 
-    def forward(self, x):
+    def forward(self, x, is_dropout = False):
         xs = []
         for downsample, down in zip(self.downsamplers, self.down):
             x_in = x if downsample is None else downsample(xs[-1])
             x_out = down(x_in)
+            if is_dropout:
+                x_out = F.dropout(x_out,p=0.2)
             xs.append(x_out)
 
         x_out = xs[-1]

@@ -9,7 +9,7 @@ class LogitMarginL1(nn.Module):
     """
     def __init__(self,
                  margin=10,
-                 alpha=1.0,
+                 alpha=0.1,
                  ignore_index=-100,
                  mu=0,
                  schedule="",
