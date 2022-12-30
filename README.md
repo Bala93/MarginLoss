@@ -1,5 +1,6 @@
 # MarginLoss
 ### *Calibrating Segmentation Networks with Margin-based Label Smoothing* 
+https://arxiv.org/abs/2209.09641
 
 ## Citations
 ```
