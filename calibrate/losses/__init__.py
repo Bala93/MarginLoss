@@ -8,3 +8,4 @@ from .ce_dice import CEDiceLoss
 from .spatial_ls_repo import CELossWithSVLS_2D
 from .logit_margin_l2 import LogitMarginL2
 from .logit_margin_ce_dice import LogitMarginDICEL1
+from .spatial_adaptive_margin import AdaptMarginSVLS
