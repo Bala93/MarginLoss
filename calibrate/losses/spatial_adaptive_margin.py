@@ -54,8 +54,7 @@ class AdaptMarginSVLS(nn.Module):
     
     def get_constr_target(self, mask, nc):
         
-        
-        mask = mask.unsqueeze(0) ## unfold works for 4d. 
+        mask = mask.unsqueeze(1) ## unfold works for 4d. 
         
         bs, _, h, w = mask.shape
         unfold = torch.nn.Unfold(kernel_size=(3, 3),padding=1)    
@@ -77,6 +76,7 @@ class AdaptMarginSVLS(nn.Module):
         loss_ce = self.cross_entropy(inputs, targets)
         
         utargets = self.get_constr_target(targets,self.nc)
+        
         loss_margin = F.relu(torch.abs(utargets-inputs)).mean()       
 
         loss = loss_ce + self.alpha * loss_margin
