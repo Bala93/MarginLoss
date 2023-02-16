@@ -1,4 +1,5 @@
-#from .trainer import Trainer
+from .trainer import Trainer
+
 #from .segement_trainer import SegmentTrainer
 #from .nlp_trainer import NLPTrainer
 from .med_trainer import MedSegmentTrainer

@@ -12,8 +12,6 @@ logger = logging.getLogger(__name__)
 
 TRAINERS = {
     "cv": Trainer,
-    # "segment": SegmentTrainer,
-    # "nlp": NLPTrainer,
     "medseg": MedSegmentTrainer
 }
 
