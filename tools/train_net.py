@@ -5,7 +5,6 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 from omegaconf.omegaconf import open_dict
 
-#from calibrate.engine import Trainer, SegmentTrainer, NLPTrainer, MedSegmentTrainer
 from calibrate.engine import Trainer, MedSegmentTrainer
 from calibrate.utils import set_random_seed
 
@@ -13,8 +12,6 @@ logger = logging.getLogger(__name__)
 
 TRAINERS = {
     "cv": Trainer,
-#    "segment": SegmentTrainer,
-#    "nlp": NLPTrainer,
     "medseg": MedSegmentTrainer
 }
 
