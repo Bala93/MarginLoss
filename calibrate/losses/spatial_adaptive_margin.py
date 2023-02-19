@@ -10,6 +10,7 @@ class AdaptMarginSVLS(nn.Module):
     def __init__(self,
                  classes=None,
                  kernel_size=3,
+                 kernel_ops='mean',
                  margin=10,
                  alpha=1.0,
                  ignore_index=-100,
@@ -32,7 +33,10 @@ class AdaptMarginSVLS(nn.Module):
 
         self.nc = classes
         self.ks = kernel_size
+        self.kernel_ops = kernel_ops
         self.cross_entropy = nn.CrossEntropyLoss()
+        if kernel_ops == 'gaussian':
+            self.svls_layer = get_svls_filter_2d(ksize=kernel_size, sigma=sigma, channels=classes)
 
     @property
     def names(self):
@@ -60,15 +64,39 @@ class AdaptMarginSVLS(nn.Module):
         bs, _, h, w = mask.shape
         unfold = torch.nn.Unfold(kernel_size=(self.ks, self.ks),padding=self.ks // 2)    
         umask = unfold(mask.float())
-        
         rmask = []
         
-        for ii in range(self.nc):
-            rmask.append(torch.sum(umask == ii,1)/self.ks**2)
+        if self.kernel_ops == 'mean':        
             
+            for ii in range(self.nc):
+                rmask.append(torch.sum(umask == ii,1)/self.ks**2)
+                
+        elif self.kernel_ops == 'max':
+            for ii in range(self.nc):
+                rmask.append((torch.max(umask,1)[0] == ii).int())
+                        
+        elif self.kernel_ops == 'min':
+            for ii in range(self.nc):
+                rmask.append((torch.min(umask,1)[0] == ii).int())
+        
+        elif self.kernel_ops == 'median':
+            for ii in range(self.nc):
+                rmask.append((torch.median(umask,1)[0] == ii).int())
+
+        elif self.kernel_ops == 'mode':
+            for ii in range(self.nc):
+                rmask.append((torch.mode(umask,1)[0] == ii).int())
+                
+        if self.kernel_ops == 'gaussian':
+            
+            oh_labels = F.one_hot(mask[:,0].to(torch.int64), num_classes = self.nc).contiguous().permute(0,3,1,2).float()
+            rmask = self.svls_layer(oh_labels)
+            
+            return rmask
+                
         rmask = torch.stack(rmask,dim=1)
         rmask = rmask.reshape(bs, self.nc, h, w)
-
+            
         return rmask
         
 
@@ -78,7 +106,7 @@ class AdaptMarginSVLS(nn.Module):
         
         utargets = self.get_constr_target(targets)
         
-        loss_margin = F.relu(torch.abs(utargets-inputs)).mean()       
+        loss_margin = torch.abs(utargets-inputs).mean()       
 
         loss = loss_ce + self.alpha * loss_margin
 
