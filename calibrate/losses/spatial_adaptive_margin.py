@@ -11,8 +11,9 @@ class AdaptMarginSVLS(nn.Module):
                  classes=None,
                  kernel_size=3,
                  kernel_ops='mean',
-                 margin=10,
-                 alpha=1.0,
+                 margin=3,
+                 alpha=0.1,
+                 beta=0,
                  ignore_index=-100,
                  sigma=1,
                  mu=0,
@@ -25,6 +26,7 @@ class AdaptMarginSVLS(nn.Module):
         
         self.margin = margin
         self.alpha = alpha
+        self.beta = beta
         self.ignore_index = ignore_index
         
         self.schedule = schedule
@@ -106,8 +108,17 @@ class AdaptMarginSVLS(nn.Module):
         
         utargets = self.get_constr_target(targets)
         
-        loss_margin = torch.abs(utargets-inputs).mean()       
+        loss_conf = torch.abs(utargets-inputs).mean()       
+   
+        if inputs.dim() > 2:
+            inputs = inputs.view(inputs.size(0), inputs.size(1), -1)  # N,C,H,W => N,C,H*W
+            inputs = inputs.transpose(1, 2)    # N,C,H*W => N,H*W,C
+            inputs = inputs.contiguous().view(-1, inputs.size(2))   # N,H*W,C => N*H*W,C
+            targets = targets.view(-1)     
+            
+        diff = self.get_diff(inputs)
+        loss_margin = F.relu(diff-self.margin).mean()
 
-        loss = loss_ce + self.alpha * loss_margin
+        loss = loss_ce + self.alpha * loss_conf + self.beta * loss_margin
 
-        return loss, loss_ce, loss_margin
+        return loss, loss_ce, loss_conf
