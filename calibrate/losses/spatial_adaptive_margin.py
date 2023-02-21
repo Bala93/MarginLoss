@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .utils import get_svls_filter_2d
+from .utils import get_gaussian_kernel_2d, get_svls_filter_2d
 
 class AdaptMarginSVLS(nn.Module):
     """Add marginal penalty to logits:
@@ -39,6 +39,8 @@ class AdaptMarginSVLS(nn.Module):
         self.cross_entropy = nn.CrossEntropyLoss()
         if kernel_ops == 'gaussian':
             self.svls_layer = get_svls_filter_2d(ksize=kernel_size, sigma=sigma, channels=classes)
+        if kernel_ops == 'bilateral':
+            self.gkernel = get_gaussian_kernel_2d(ksize=kernel_size, sigma=sigma)
 
     @property
     def names(self):
@@ -59,33 +61,38 @@ class AdaptMarginSVLS(nn.Module):
         diff = max_values - inputs
         return diff
     
-    def get_constr_target(self, mask):
+    def get_constr_target(self, mask, img):
         
         mask = mask.unsqueeze(1) ## unfold works for 4d. 
         
         bs, _, h, w = mask.shape
         unfold = torch.nn.Unfold(kernel_size=(self.ks, self.ks),padding=self.ks // 2)    
-        umask = unfold(mask.float())
+        
         rmask = []
         
         if self.kernel_ops == 'mean':        
-            
+            umask = unfold(mask.float())
+                
             for ii in range(self.nc):
                 rmask.append(torch.sum(umask == ii,1)/self.ks**2)
                 
         elif self.kernel_ops == 'max':
+            umask = unfold(mask.float())
             for ii in range(self.nc):
                 rmask.append((torch.max(umask,1)[0] == ii).int())
                         
         elif self.kernel_ops == 'min':
+            umask = unfold(mask.float())
             for ii in range(self.nc):
                 rmask.append((torch.min(umask,1)[0] == ii).int())
         
         elif self.kernel_ops == 'median':
+            umask = unfold(mask.float())
             for ii in range(self.nc):
                 rmask.append((torch.median(umask,1)[0] == ii).int())
 
         elif self.kernel_ops == 'mode':
+            umask = unfold(mask.float())
             for ii in range(self.nc):
                 rmask.append((torch.mode(umask,1)[0] == ii).int())
                 
@@ -95,18 +102,33 @@ class AdaptMarginSVLS(nn.Module):
             rmask = self.svls_layer(oh_labels)
             
             return rmask
-                
+        
+        if self.kernel_ops == 'bilateral':
+            
+            umask = unfold(mask.float())
+            uimg = unfold(img) # bs, 9, N
+            cuimg = uimg[:,self.ks ** 2 // 2,:].unsqueeze(1) # bs, 1, N
+            ugrad = torch.abs(uimg - cuimg) 
+            ukernel = ugrad * self.gkernel.reshape(1,self.ks ** 2,1).to(ugrad.device)
+            ohumask = F.one_hot(umask.to(torch.int64), num_classes = self.nc)
+            ukernel = ukernel.unsqueeze(-1)
+            rmask = ohumask  * ukernel
+            rmask = torch.mean(rmask, dim=1)
+            rmask = rmask.reshape(bs, self.nc, h, w)
+            
+            return rmask 
+            
         rmask = torch.stack(rmask,dim=1)
         rmask = rmask.reshape(bs, self.nc, h, w)
             
         return rmask
         
 
-    def forward(self, inputs, targets):
+    def forward(self, inputs, targets, imgs):
         
         loss_ce = self.cross_entropy(inputs, targets)
         
-        utargets = self.get_constr_target(targets)
+        utargets = self.get_constr_target(targets, imgs)
         
         loss_conf = torch.abs(utargets-inputs).mean()       
    

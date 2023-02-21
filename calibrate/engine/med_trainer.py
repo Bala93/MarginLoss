@@ -163,7 +163,10 @@ class MedSegmentTrainer(Trainer):
             if isinstance(outputs, Dict):
                 outputs = outputs["out"]
                 
-            loss = self.loss_func(outputs, labels)
+            if self.cfg.loss.name == 'adaptive_margin_svls':
+                loss = self.loss_func(outputs, labels, inputs)
+            else:
+                loss = self.loss_func(outputs, labels)
             if isinstance(loss, tuple):
                 # For compounding loss, make sure the first term is the overall loss
                 loss_total = loss[0]
@@ -212,11 +215,17 @@ class MedSegmentTrainer(Trainer):
             self.data_time_meter.update(time.time() - end)
             inputs, labels = inputs.to(self.device), labels.to(self.device)
             # forward
+            
             outputs = self.model(inputs)
             # print (outputs.shape)
             if isinstance(outputs, Dict):
                 outputs = outputs["out"]
-            loss = self.loss_func(outputs, labels)
+                
+            if self.cfg.loss.name == 'adaptive_margin_svls':
+                loss = self.loss_func(outputs, labels, inputs)
+            else:
+                loss = self.loss_func(outputs, labels)
+
             # metric
             self.loss_meter.update(loss)
             predicts = F.softmax(outputs, dim=1)
