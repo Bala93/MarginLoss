@@ -105,18 +105,33 @@ class AdaptMarginSVLS(nn.Module):
         
         if self.kernel_ops == 'bilateral':
             
-            umask = unfold(mask.float())
+            umask = unfold(mask.float()) # bs, 9, N
             uimg = unfold(img) # bs, 9, N
             cuimg = uimg[:,self.ks ** 2 // 2,:].unsqueeze(1) # bs, 1, N
-            ugrad = torch.abs(uimg - cuimg) 
-            ukernel = ugrad * self.gkernel.reshape(1,self.ks ** 2,1).to(ugrad.device)
-            ohumask = F.one_hot(umask.to(torch.int64), num_classes = self.nc)
-            ukernel = ukernel.unsqueeze(-1)
-            rmask = ohumask  * ukernel
-            rmask = torch.mean(rmask, dim=1)
-            rmask = rmask.reshape(bs, self.nc, h, w)
+            ugrad = torch.abs(uimg - cuimg) # bs, 9, N
+            ukernel = ugrad * self.gkernel.reshape(1,self.ks ** 2,1).to(ugrad.device) # bs, 9, N
+            ohumask = F.one_hot(umask.to(torch.int64), num_classes = self.nc).contiguous() # bs, 9, N, 4
+            ukernel = ukernel.unsqueeze(-1) # bs, 9, N, 1
+            rmask = ohumask  * ukernel # bs, 9, N, 4
+            rmask = torch.mean(rmask, dim=1).permute(0,2,1) # bs, 4, N
+            rmask = rmask.reshape(bs, self.nc, h, w) # bs, 4, N/2, N/2
             
             return rmask 
+        
+        if self.kernel_ops == 'gradient':
+            
+            umask = unfold(mask.float()) # bs, 9, N
+            uimg = unfold(img) # bs, 9, N
+            cuimg = uimg[:,self.ks ** 2 // 2,:].unsqueeze(1) # bs, 1, N
+            ukernel = torch.abs(uimg - cuimg) # bs, 9, N
+            ohumask = F.one_hot(umask.to(torch.int64), num_classes = self.nc).contiguous() # bs, 9, N, 4
+            ukernel = ukernel.unsqueeze(-1) # bs, 9, N, 1
+            rmask = ohumask  * ukernel # bs, 9, N, 4
+            rmask = torch.mean(rmask, dim=1).permute(0,2,1) # bs, 4, N
+            rmask = rmask.reshape(bs, self.nc, h, w) # bs, 4, N/2, N/2
+            
+            return rmask 
+
             
         rmask = torch.stack(rmask,dim=1)
         rmask = rmask.reshape(bs, self.nc, h, w)
