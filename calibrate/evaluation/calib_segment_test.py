@@ -157,7 +157,7 @@ class CalibSegmentEvaluator(DatasetEvaluator):
 
             return pd.DataFrame(data, columns=columns)
         
-    def calib_score(self, isprint=False):
+    def calib_score(self, isprint=False, return_dataframe=True):
         
         ece = self.total_ece.mean()
         cece = self.total_cece.mean()
@@ -174,6 +174,14 @@ class CalibSegmentEvaluator(DatasetEvaluator):
         if isprint:
             table = AsciiTable(table_data)
             logger.info("\n" + table.table)
+            
+        if return_dataframe:
+            data = {key: [] for key in columns}
+            data[columns[0]].append(ece)
+            data[columns[1]].append(cece)
+            
+            return pd.DataFrame(data, columns=columns)
+        
 
     def wandb_score_table(self):
         table_data = self.class_score(isprint=False, return_dataframe=True)

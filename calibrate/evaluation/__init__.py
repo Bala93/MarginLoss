@@ -13,3 +13,4 @@ from .segment_calibrate_evaluator import SegmentCalibrateEvaluator
 from .sgement_logits_evaluator import SegmentLogitsEvaluator
 from .probs_evaluator import ProbsEvaluator
 from .ood_evaluator import OODEvaluator
+from .calib_segment_test import CalibSegmentEvaluator

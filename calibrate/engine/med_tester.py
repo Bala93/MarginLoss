@@ -142,7 +142,7 @@ class MedSegmentTester(Tester):
             
             key = 'hd-{}'.format(class_name_list[ii])
             val = class_hd_list[ii]
-            log_dict.update({key:val})    
+            log_dict.update({key:val})
         
         if self.cfg.wandb.enable:
             wandb_log_dict = {}
@@ -157,8 +157,7 @@ class MedSegmentTester(Tester):
             if phase.lower() == "test":
                 wandb_log_dict["{}/calibrate_score_table".format(phase)] = (
                     wandb.Table(
-                        columns=calibrate_table_data[0],
-                        data=calibrate_table_data[1:]
+                        dataframe=calibrate_table_data
                     )
                 )
             wandb.log(wandb_log_dict)
