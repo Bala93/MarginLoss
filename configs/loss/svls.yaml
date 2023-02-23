@@ -1,9 +1,14 @@
 name: svls
 numclasses: 4
+sigma: 1
+ksize: 3
+
 # ignore_index: -100
 
 object:
   _target_: calibrate.losses.CELossWithSVLS_2D
   classes: ${loss.numclasses}
+  sigma: ${loss.sigma}
+  ksize: ${loss.ksize}
   # ignore_index: ${loss.ignore_index}
   # reduction: mean
