@@ -13,7 +13,41 @@ import torch
 logger = logging.getLogger(__name__)
 
 
-def shape_metrics(pred_label, label, num_classes, is_hd=False):
+def brats_postprocess(mask1, mask2, cno):
+
+    nmask1 = np.zeros(shape=mask1.shape)
+    nmask2 = np.zeros(shape=mask2.shape)
+
+    if cno == 0: 
+        idx = mask1 == 0
+        nmask1[idx] = 1
+        idx = mask2 == 0
+        nmask2[idx] = 1
+    
+    if cno == 1: # ET
+        idx = mask1 == 3
+        nmask1[idx] = 1
+        idx = mask2 == 3
+        nmask2[idx] = 1
+
+
+    if cno == 2: # TC
+        idx = np.logical_or(mask1 == 1, mask1 == 3)
+        nmask1[idx] = 2
+        idx = np.logical_or(mask2 == 1, mask2 == 3)
+        nmask2[idx] = 2
+
+
+    if cno == 3: # WT
+        idx = mask1 > 0
+        nmask1[idx] = 3
+        idx = mask2 > 0
+        nmask2[idx] = 3
+
+    return nmask1, nmask2
+
+
+def shape_metrics(pred_label, label, num_classes, is_hd=False, dataset_type=None):
 
     hd = []
     dsc = []
@@ -22,8 +56,17 @@ def shape_metrics(pred_label, label, num_classes, is_hd=False):
     for cls in range(num_classes):
         
         try:
-            pred_bw = pred_label == cls
-            label_bw = label == cls
+            
+            if dataset_type == 'brain19' :
+                pred_label_, label_ = brats_postprocess(pred_label, label, cls)
+                pred_bw = pred_label_ == cls
+                label_bw = label_ == cls
+                
+            else:
+                pred_label_, label_ = pred_label, label                
+                pred_bw = pred_label_ == cls
+                label_bw = label_ == cls
+            
             if is_hd:
                 hd.append(binary.asd(pred_bw, label_bw))
             else:
@@ -32,7 +75,7 @@ def shape_metrics(pred_label, label, num_classes, is_hd=False):
             dsc.append(np.round(binary.dc(pred_bw,label_bw),4))
             
         except Exception as e:
-            print ("Empty volume", cls)
+            print ("Empty volume", cls, e)
             hd.append(0)
             dsc.append(0)
             #dsc.append(binary.dc(pred_bw,label_bw))
@@ -55,12 +98,13 @@ class CalibSegmentEvaluator(DatasetEvaluator):
     def __init__(self,
                  classes: Optional[List[str]] = None,
                  ignore_index: int = -1,
-                 ishd = False) -> None:
+                 ishd = False, dataset_type=None) -> None:
         super().__init__()
         self.classes = classes
         self.num_classes = len(self.classes)
         self.ignore_index = ignore_index
         self.ishd = ishd
+        self.dataset_type = dataset_type
 
     def num_samples(self):
         return self.nsamples
@@ -89,7 +133,7 @@ class CalibSegmentEvaluator(DatasetEvaluator):
 
         n = pred.shape[0]
                 
-        dsc, hd = shape_metrics(pred, target,self.num_classes)
+        dsc, hd = shape_metrics(pred, target,self.num_classes,self.ishd, self.dataset_type)
         
         n, c, x, y = logits.shape
         

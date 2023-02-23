@@ -41,7 +41,8 @@ class MedSegmentTester(Tester):
         self.evaluator = CalibSegmentEvaluator(
             self.test_loader.dataset.classes,
             ignore_index=255,
-            ishd=False)
+            ishd=False,
+            dataset_type=self.cfg.data.name)
         
     @torch.no_grad()
     def eval_epoch(self, data_loader, phase="Val",post_temp=False,ts_type='ts'):
