@@ -5,14 +5,13 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 from omegaconf.omegaconf import open_dict
 
-from calibrate.engine import Tester, OODTester, MedSegmentTester
+from calibrate.engine import Tester, MedSegmentTester
 from calibrate.utils import set_random_seed
 
 logger = logging.getLogger(__name__)
 
 TESTER = {
     "cv": Tester,
-    "ood": OODTester,
     "medseg": MedSegmentTester
 }
 
