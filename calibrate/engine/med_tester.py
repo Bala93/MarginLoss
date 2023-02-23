@@ -14,7 +14,7 @@ from typing import Optional
 from calibrate.net import ModelWithTemperature, LTS_CamVid_With_Image, Temperature_Scaling, LTS_LW
 # from calibrate.losses import LabelSmoothConstrainedLoss
 from calibrate.evaluation import (
-    AverageMeter, LossMeter, SegmentEvaluator, SegmentCalibrateEvaluator
+    AverageMeter, LossMeter, SegmentEvaluator, SegmentCalibrateEvaluator, CalibSegmentEvaluator
 )
 from calibrate.utils import (
     load_train_checkpoint, load_checkpoint, save_checkpoint, round_dict
@@ -38,19 +38,11 @@ class MedSegmentTester(Tester):
     def build_meter(self):
         self.batch_time_meter = AverageMeter()
         self.num_classes = self.cfg.model.num_classes
-        self.evaluator = SegmentEvaluator(
+        self.evaluator = CalibSegmentEvaluator(
             self.test_loader.dataset.classes,
             ignore_index=255,
-            ishd=True
-        )
-        self.calibrate_evaluator = SegmentCalibrateEvaluator(
-            self.num_classes,
-            num_bins=self.cfg.calibrate.num_bins,
-            ignore_index=255,
-            device=self.device,
-            is_dilate=self.cfg.test.is_dilate
-        )
-
+            ishd=False)
+        
     @torch.no_grad()
     def eval_epoch(self, data_loader, phase="Val",post_temp=False,ts_type='ts'):
         self.reset_meter()
@@ -60,6 +52,12 @@ class MedSegmentTester(Tester):
         # fsave = open(osp.join(self.work_dir, "segment_{}_calibrate.txt".format(self.cfg.loss.name)), "w")
         for i, (inputs, labels) in enumerate(tqdm(data_loader)):
             inputs, labels = inputs.to(self.device), labels.to(self.device)
+            inputs = inputs.squeeze()
+            labels = labels.squeeze()
+            
+            if len(inputs.shape) == 3:
+                inputs = inputs.unsqueeze(1)
+            
             # forward
             outputs = self.model(inputs)
             if isinstance(outputs, Dict):
@@ -83,12 +81,14 @@ class MedSegmentTester(Tester):
             
             self.evaluator.update(
                 to_numpy(pred_labels),
-                to_numpy(labels)
+                to_numpy(labels),
+                outputs,
+                labels
             )
             
-            self.calibrate_evaluator.update(
-                outputs, labels
-            )
+            # self.calibrate_evaluator.update(
+            #     outputs, labels
+            # )
             
             # self.logits_evaluator(
             #     np.expand_dims(to_numpy(outputs), axis=0),
@@ -120,15 +120,16 @@ class MedSegmentTester(Tester):
 
     def log_eval_epoch_info(self, phase="Val"):
         log_dict = {}
-        log_dict["samples"] = self.evaluator.num_samples()
+        #log_dict["samples"] = self.evaluator.num_samples()
         metric = self.evaluator.mean_score()
         log_dict.update(metric)
-        calibrate_metric, calibrate_table_data = self.calibrate_evaluator.mean_score(isprint=False)
-        log_dict.update(calibrate_metric)
+        # calibrate_metric, calibrate_table_data = self.calibrate_evaluator.mean_score(isprint=False)
+        # log_dict.update(calibrate_metric)
         logger.info("{} Epoch\t{}".format(
             phase, json.dumps(round_dict(log_dict))
         ))
         class_table_data = self.evaluator.class_score(isprint=True, return_dataframe=True)
+        calibrate_table_data = self.evaluator.calib_score(isprint=True)
         
         class_hd_list = class_table_data['hd'].to_list()[:-1]
         class_dice_list = class_table_data['dsc'].to_list()[:-1]
@@ -143,7 +144,6 @@ class MedSegmentTester(Tester):
             val = class_hd_list[ii]
             log_dict.update({key:val})    
         
-        logger.info("\n" + AsciiTable(calibrate_table_data).table)
         if self.cfg.wandb.enable:
             wandb_log_dict = {}
             wandb_log_dict.update(dict(
