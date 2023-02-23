@@ -97,14 +97,14 @@ class AdaptMarginSVLS(nn.Module):
                 rmask.append((torch.mode(umask,1)[0] == ii).int())
                 
         if self.kernel_ops == 'gaussian':
-            
+
             oh_labels = F.one_hot(mask[:,0].to(torch.int64), num_classes = self.nc).contiguous().permute(0,3,1,2).float()
             rmask = self.svls_layer(oh_labels)
-            
+
             return rmask
-        
+
         if self.kernel_ops == 'bilateral':
-            
+
             umask = unfold(mask.float()) # bs, 9, N
             uimg = unfold(img) # bs, 9, N
             cuimg = uimg[:,self.ks ** 2 // 2,:].unsqueeze(1) # bs, 1, N
@@ -115,11 +115,11 @@ class AdaptMarginSVLS(nn.Module):
             rmask = ohumask  * ukernel # bs, 9, N, 4
             rmask = torch.mean(rmask, dim=1).permute(0,2,1) # bs, 4, N
             rmask = rmask.reshape(bs, self.nc, h, w) # bs, 4, N/2, N/2
-            
-            return rmask 
-        
+
+            return rmask
+
         if self.kernel_ops == 'gradient':
-            
+
             umask = unfold(mask.float()) # bs, 9, N
             uimg = unfold(img) # bs, 9, N
             cuimg = uimg[:,self.ks ** 2 // 2,:].unsqueeze(1) # bs, 1, N
@@ -129,10 +129,41 @@ class AdaptMarginSVLS(nn.Module):
             rmask = ohumask  * ukernel # bs, 9, N, 4
             rmask = torch.mean(rmask, dim=1).permute(0,2,1) # bs, 4, N
             rmask = rmask.reshape(bs, self.nc, h, w) # bs, 4, N/2, N/2
-            
-            return rmask 
 
-            
+            return rmask
+
+        if self.kernel_ops == 'image_proportions_l1':
+
+            umask = unfold(mask.float()) # bs, 9, N
+            uimg = unfold(img) # bs, 9, N
+            cuimg = uimg[:,self.ks ** 2 // 2,:].unsqueeze(1) # bs, 1, N
+            ukernel = torch.exp(-1.0 * torch.abs(uimg - cuimg)) # bs, 9, N
+            ukernel = ukernel/ukernel.sum(dim=1, keepdim=True)
+            ohumask = F.one_hot(umask.to(torch.int64), num_classes = self.nc).contiguous() # bs, 9, N, 4
+            ukernel = ukernel.unsqueeze(-1) # bs, 9, N, 1
+            rmask = ohumask  * ukernel # bs, 9, N, 4
+            rmask = torch.sum(rmask, dim=1).permute(0,2,1) # bs, 4, N
+            rmask = rmask.reshape(bs, self.nc, h, w) # bs, 4, N/2, N/2
+
+            return rmask
+
+
+        if self.kernel_ops == 'image_proportions_l2':
+
+            umask = unfold(mask.float()) # bs, 9, N
+            uimg = unfold(img) # bs, 9, N
+            cuimg = uimg[:,self.ks ** 2 // 2,:].unsqueeze(1) # bs, 1, N
+            ukernel = torch.exp(-1.0 * (uimg - cuimg)**2) # bs, 9, N
+            #ukernel = ukernel/ukernel.sum(dim=1)
+            ukernel = ukernel/ukernel.sum(dim=1, keepdim=True)
+            ohumask = F.one_hot(umask.to(torch.int64), num_classes = self.nc).contiguous() # bs, 9, N, 4
+            ukernel = ukernel.unsqueeze(-1) # bs, 9, N, 1
+            rmask = ohumask  * ukernel # bs, 9, N, 4
+            rmask = torch.sum(rmask, dim=1).permute(0,2,1) # bs, 4, N
+            rmask = rmask.reshape(bs, self.nc, h, w) # bs, 4, N/2, N/2
+
+            return rmask
+
         rmask = torch.stack(rmask,dim=1)
         rmask = rmask.reshape(bs, self.nc, h, w)
             
