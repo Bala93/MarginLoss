@@ -1,7 +1,5 @@
 name: adaptive_margin_svls
-margin: 3
 alpha: 0.1
-beta: 0
 ignore_index: -100
 schedule: ""
 mu: 0
@@ -10,13 +8,12 @@ step_size: 100
 numclasses: 4
 kernel_size: 3
 kernel_ops: 'mean'
-
+distance_type: 'l1'
+is_softmax: False
 
 object:
   _target_: calibrate.losses.AdaptMarginSVLS
-  margin: ${loss.margin}
   alpha: ${loss.alpha}
-  beta: ${loss.beta}
   ignore_index: ${loss.ignore_index}
   mu: ${loss.mu}
   schedule: ${loss.schedule}
@@ -25,3 +22,5 @@ object:
   classes: ${loss.numclasses}
   kernel_size: ${loss.kernel_size}
   kernel_ops: ${loss.kernel_ops}
+  distance_type: ${loss.distance_type}
+  is_softmax: ${loss.is_softmax}

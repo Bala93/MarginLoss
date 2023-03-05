@@ -11,9 +11,12 @@ class AdaptMarginSVLS(nn.Module):
                  classes=None,
                  kernel_size=3,
                  kernel_ops='mean',
-                 margin=3,
+                 distance_type='l1',
+                 is_softmax=False,
+                #  margin_mbls=3,
+                #  margin_svls=0.1,
                  alpha=0.1,
-                 beta=0,
+                #  beta=0,
                  ignore_index=-100,
                  sigma=1,
                  mu=0,
@@ -24,14 +27,20 @@ class AdaptMarginSVLS(nn.Module):
         super().__init__()
         assert schedule in ("", "add", "multiply", "step")
         
-        self.margin = margin
+        # self.margin_mbls = margin_mbls
+        # self.margin_svls = margin_svls
+        
+        self.distance_type = distance_type
+        
         self.alpha = alpha
-        self.beta = beta
+        # self.beta = beta
         self.ignore_index = ignore_index
         
         self.schedule = schedule
         self.max_alpha = max_alpha
         self.step_size = step_size
+
+        self.is_softmax = is_softmax
 
         self.nc = classes
         self.ks = kernel_size
@@ -176,17 +185,27 @@ class AdaptMarginSVLS(nn.Module):
         
         utargets = self.get_constr_target(targets, imgs)
         
-        loss_conf = torch.abs(utargets-inputs).mean()       
-   
-        if inputs.dim() > 2:
-            inputs = inputs.view(inputs.size(0), inputs.size(1), -1)  # N,C,H,W => N,C,H*W
-            inputs = inputs.transpose(1, 2)    # N,C,H*W => N,H*W,C
-            inputs = inputs.contiguous().view(-1, inputs.size(2))   # N,H*W,C => N*H*W,C
-            targets = targets.view(-1)     
+        if self.is_softmax:
+            inputs = F.softmax(inputs, dim=1)
+        
+        if self.distance_type == 'l1':
+            loss_conf = torch.abs(utargets - inputs).mean()  
             
-        diff = self.get_diff(inputs)
-        loss_margin = F.relu(diff-self.margin).mean()
+        if self.distance_type == 'l2':    
+            loss_conf = (torch.abs(utargets - inputs)**2).mean()  
+        
+        # loss_conf = torch.abs(utargets- F.softmax(inputs,dim=1)).mean()  
+        # loss_conf = F.relu(torch.abs(utargets - F.softmax(inputs,dim=1)) - self.margin_svls).mean()       
+   
+        # if inputs.dim() > 2:
+        #     inputs = inputs.view(inputs.size(0), inputs.size(1), -1)  # N,C,H,W => N,C,H*W
+        #     inputs = inputs.transpose(1, 2)    # N,C,H*W => N,H*W,C
+        #     inputs = inputs.contiguous().view(-1, inputs.size(2))   # N,H*W,C => N*H*W,C
+        #     targets = targets.view(-1)     
+            
+        # diff = self.get_diff(inputs)
+        # loss_margin = F.relu(diff-self.margin_mbls).mean()
 
-        loss = loss_ce + self.alpha * loss_conf + self.beta * loss_margin
+        loss = loss_ce + self.alpha * loss_conf #+ self.beta * loss_margin
 
         return loss, loss_ce, loss_conf
