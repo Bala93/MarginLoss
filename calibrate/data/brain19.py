@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split
 CLASSES = ('background','foreground1','foreground2','foreground3')
 
 class BrainDataset(Dataset):
-    def __init__(self, file_names, mode='test'):
+    def __init__(self, file_names, mode='train'):
         self.file_names = file_names
         self.classes = CLASSES
         self.info = []
