@@ -41,7 +41,7 @@ class MedSegmentTester(Tester):
         self.evaluator = CalibSegmentEvaluator(
             self.test_loader.dataset.classes,
             ignore_index=255,
-            ishd=False,
+            ishd=True,
             dataset_type=self.cfg.data.name)
         
     @torch.no_grad()
@@ -51,13 +51,19 @@ class MedSegmentTester(Tester):
 
         end = time.time()
         # fsave = open(osp.join(self.work_dir, "segment_{}_calibrate.txt".format(self.cfg.loss.name)), "w")
-        for i, (inputs, labels) in enumerate(tqdm(data_loader)):
+        for i, (inputs, labels, fpath) in enumerate(tqdm(data_loader)):
             inputs, labels = inputs.to(self.device), labels.to(self.device)
             inputs = inputs.squeeze()
             labels = labels.squeeze()
             
+            # print (fpath)
+            
             if len(inputs.shape) == 3:
                 inputs = inputs.unsqueeze(1)
+            
+            if len(inputs.shape) == 2:
+                inputs = inputs.unsqueeze(0).unsqueeze(0)
+                labels = labels.unsqueeze(0)
             
             # forward
             outputs = self.model(inputs)
@@ -84,7 +90,8 @@ class MedSegmentTester(Tester):
                 to_numpy(pred_labels),
                 to_numpy(labels),
                 outputs,
-                labels
+                labels,
+                fpath
             )
             
             # self.calibrate_evaluator.update(
@@ -135,6 +142,9 @@ class MedSegmentTester(Tester):
         class_hd_list = class_table_data['hd'].to_list()[:-1]
         class_dice_list = class_table_data['dsc'].to_list()[:-1]
         class_name_list = class_table_data['Class'].to_list()[:-1]
+        
+        print (self.cfg.test.checkpoint)
+        self.evaluator.save_csv(osp.dirname(str(self.cfg.test.checkpoint)))
         
         for ii in range(len(class_name_list)):
             key = 'dsc-{}'.format(class_name_list[ii])
