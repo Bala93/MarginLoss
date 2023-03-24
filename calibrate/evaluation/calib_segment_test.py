@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from .evaluator import DatasetEvaluator
 from calibrate.evaluation import metrics
 import torch
+import os 
 
 logger = logging.getLogger(__name__)
 
@@ -67,18 +68,24 @@ def shape_metrics(pred_label, label, num_classes, is_hd=False, dataset_type=None
                 pred_bw = pred_label_ == cls
                 label_bw = label_ == cls
             
-            if is_hd:
-                hd.append(binary.asd(pred_bw, label_bw))
+            if np.sum(label_bw) == 0:
+                hd.append(0)
+                dsc.append(1)
+            
+            elif is_hd:
+                hd.append(binary.hd95(pred_bw, label_bw))
+                dsc.append(np.round(binary.dc(pred_bw,label_bw),4))
+                
             else:
                 hd.append(0)
-            # hd.append(binary.hd(pred_bw, label_bw))
-            dsc.append(np.round(binary.dc(pred_bw,label_bw),4))
+                dsc.append(np.round(binary.dc(pred_bw,label_bw),4))
+                
             
         except Exception as e:
             print ("Empty volume", cls, e)
             hd.append(0)
-            dsc.append(0)
-            #dsc.append(binary.dc(pred_bw,label_bw))
+            # dsc.append(1)
+            dsc.append(binary.dc(pred_bw,label_bw))
             
     # return np.round(np.mean(dsc),4), np.round(np.mean(hd),4)
     return dsc, hd
@@ -114,6 +121,7 @@ class CalibSegmentEvaluator(DatasetEvaluator):
         self.total_hd = np.empty((0,self.num_classes), dtype=np.float32)
         self.total_ece = np.empty((0,1), dtype=np.float32)
         self.total_cece = np.empty((0,1), dtype=np.float32)
+        self.file_names = []
 
     def main_metric(self):
         return "miou"
@@ -123,7 +131,7 @@ class CalibSegmentEvaluator(DatasetEvaluator):
         target = target[:, 1:] if target.shape[1] > 1 else target
         return pred, target
 
-    def update(self, pred: np.ndarray, target: np.ndarray, logits, labels):
+    def update(self, pred: np.ndarray, target: np.ndarray, logits, labels, fpath):
         """Update all the metric from batch size prediction and target.
 
         Args:
@@ -134,6 +142,8 @@ class CalibSegmentEvaluator(DatasetEvaluator):
         n = pred.shape[0]
                 
         dsc, hd = shape_metrics(pred, target,self.num_classes,self.ishd, self.dataset_type)
+        
+        # print (dsc)
         
         n, c, x, y = logits.shape
         
@@ -152,6 +162,7 @@ class CalibSegmentEvaluator(DatasetEvaluator):
         self.total_hd = np.vstack([self.total_hd, hd])
         self.total_ece = np.vstack([self.total_ece, ece])
         self.total_cece = np.vstack([self.total_cece, cece])
+        self.file_names.append(os.path.basename(fpath[0]))
         
     def mean_score(self):
         
@@ -230,3 +241,9 @@ class CalibSegmentEvaluator(DatasetEvaluator):
     def wandb_score_table(self):
         table_data = self.class_score(isprint=False, return_dataframe=True)
         return wandb.Table(dataframe=table_data)
+
+    def save_csv(self,save_dir):
+        
+        with open(os.path.join(save_dir,'metrics.csv'),'w') as f:
+            for fname, dsc in zip(self.file_names, self.total_dsc):
+                f.write(','.join([fname] + [str(ii) for ii in dsc]) + '\n')
