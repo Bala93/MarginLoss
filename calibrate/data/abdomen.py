@@ -51,7 +51,7 @@ class AbdomenDataset(Dataset):
             volimg = torch.from_numpy(volimg)[0]
             volmask = torch.from_numpy(volmask)
             
-            return volimg.float(), volmask.long()            
+            return volimg.float(), volmask.long(), img_file_name
 
         return torch.from_numpy(image).float(), torch.from_numpy(mask).long()
 
