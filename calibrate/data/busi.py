@@ -62,7 +62,7 @@ def get_test_loader(data_root, batch_size=32, num_workers=8, pin_memory=True):
     test_path = os.path.join(data_root, 'test')
     test_files = glob.glob(test_path + '/*')
     test_dataset = BusiDataset(test_files)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
     return test_loader
 

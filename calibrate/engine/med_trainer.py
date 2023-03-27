@@ -154,7 +154,6 @@ class MedSegmentTrainer(Trainer):
             # compute the time for data loading
             self.data_time_meter.update(time.time() - end)
             inputs, labels = inputs.to(self.device), labels.to(self.device)
-
             # print (inputs.shape, torch.unique(labels))
 
             # forward

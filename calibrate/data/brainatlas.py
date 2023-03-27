@@ -53,7 +53,7 @@ class BrainAtlasDataset(Dataset):
             volimg = torch.from_numpy(volimg).permute(3, 0, 1, 2)
             volmask = torch.from_numpy(volmask).permute(2, 0, 1)
             
-            return volimg.float(), volmask.long()
+            return volimg.float(), volmask.long(), img_file_name
 
 
 def get_train_val_loader(data_root, batch_size=32, num_workers=8, pin_memory=True):

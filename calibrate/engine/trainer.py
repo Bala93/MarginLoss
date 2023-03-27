@@ -145,7 +145,7 @@ class Trainer:
         log_dict.update(self.loss_meter.get_avgs())
         if isinstance(self.loss_func, LogitMarginL1):
             log_dict["alpha"] = self.loss_func.alpha
-        metric, table_data = self.evaluator.mean_score(print=False)
+        metric, table_data = self.evaluator.mean_score(isprint=False)
         log_dict.update(metric)
         log_dict.update(self.logits_evaluator.mean_score())
         # log_dict.update(self.probs_evaluator.mean_score())
@@ -167,7 +167,7 @@ class Trainer:
         log_dict = {}
         log_dict["samples"] = self.evaluator.num_samples()
         log_dict.update(self.loss_meter.get_avgs())
-        classify_metric, classify_table_data = self.evaluator.mean_score(print=False)
+        classify_metric, classify_table_data = self.evaluator.mean_score(isprint=False)
         log_dict.update(classify_metric)
         #calibrate_metric, calibrate_table_data = self.calibrate_evaluator.mean_score(print=False)
         #log_dict.update(calibrate_metric)
@@ -247,7 +247,7 @@ class Trainer:
                 self.log_iter_info(i, max_iter, epoch)
             end = time.time()
 
-            #break 
+            # break 
         self.log_epoch_info(epoch)
 
     @torch.no_grad()
@@ -285,6 +285,9 @@ class Trainer:
             if (i + 1) % self.cfg.log_period == 0:
                 self.log_iter_info(i, max_iter, epoch, phase)
             end = time.time()
+            
+            # break 
+        
         self.log_eval_epoch_info(epoch, phase)
 
         return self.loss_meter.avg(0), self.evaluator.mean_score(all_metric=False)[0]
