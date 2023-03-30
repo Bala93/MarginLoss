@@ -1,4 +1,3 @@
-# MarginLoss
 ### *Calibrating Segmentation Networks with Margin-based Label Smoothing* 
 https://arxiv.org/abs/2209.09641
 
@@ -10,6 +9,7 @@ https://arxiv.org/abs/2209.09641
   journal={arXiv preprint arXiv:2209.09641},
   year={2022}
 }
+
 ```
 ### *Trust your neighbours: Penalty-based constraints for model calibration* 
 https://arxiv.org/abs/2303.06268
