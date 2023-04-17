@@ -1,4 +1,4 @@
-### *Calibrating Segmentation Networks with Margin-based Label Smoothing* 
+### *Calibrating Segmentation Networks with Margin-based Label Smoothing (MedIA 2023)* 
 https://arxiv.org/abs/2209.09641
 
 ### *Trust your neighbours: Penalty-based constraints for model calibration* 
