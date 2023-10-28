@@ -1,8 +1,8 @@
-### *Calibrating Segmentation Networks with Margin-based Label Smoothing (MedIA 2023)* 
-https://arxiv.org/abs/2209.09641
+### *Calibrating Segmentation Networks with Margin-based Label Smoothing* 
+[MedIA 2023](https://arxiv.org/abs/2209.09641)
 
-### *Trust your neighbours: Penalty-based constraints for model calibration (MICCAI 2023)* 
-https://arxiv.org/abs/2303.06268
+### *Trust your neighbours: Penalty-based constraints for model calibration* 
+[MICCAI 2023](https://arxiv.org/abs/2303.06268)
 
 
 ## Citations
@@ -10,7 +10,7 @@ https://arxiv.org/abs/2303.06268
 @article{murugesan2022calibrating,
   title={Calibrating Segmentation Networks with Margin-based Label Smoothing},
   author={Murugesan, Balamurali and Liu, Bingyuan and Galdran, Adrian and Ayed, Ismail Ben and Dolz, Jose},
-  journal={arXiv preprint arXiv:2209.09641},
+  journal={Medical Image Analysis (MedIA)},
   year={2022}
 }
 ```
@@ -19,7 +19,7 @@ https://arxiv.org/abs/2303.06268
 @article{murugesan2023trust,
   title={Trust your neighbours: Penalty-based constraints for model calibration},
   author={Murugesan, Balamurali and Adiga V, Sukesh and Liu, Bingyuan and Lombaert, Herv{\'e} and Ayed, Ismail Ben and Dolz, Jose},
-  journal={arXiv preprint arXiv:2303.06268},
+  journal={Medical Image Computing and Computer Assisted Intervention (MICCAI)},
   year={2023}
 }
 ```
