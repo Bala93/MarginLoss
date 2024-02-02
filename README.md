@@ -5,10 +5,12 @@
 [MICCAI 2023](https://arxiv.org/abs/2303.06268)
 
 ## Examples
-```
 ### NACL
+```
 python tools/train_net.py wandb.enable=True task="medseg" data="cardiac" model="unet" model.num_classes="4" loss="adaptive_margin_svls" loss.kernel_ops="mean" optim="adam" scheduler="step" wandb.project="unet-cardiac" loss.is_margin=True
+```
 ### MbLS
+```
 python tools/train_net.py wandb.enable=True task="medseg" data="cardiac" data.ratio=0.5 model="unet" model.num_classes="4" loss="logit_margin" loss.margin="5" optim="adam" scheduler="step" wandb.project="unet-cardiac"
 ```
 
