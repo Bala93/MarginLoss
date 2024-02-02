@@ -15,14 +15,14 @@ python tools/train_net.py wandb.enable=True task="medseg" data="cardiac" data.ra
 ```
 
 ## Citations
-
+```
 @article{murugesan2024neighbor,
   title={Neighbor-Aware Calibration of Segmentation Networks with Penalty-Based Constraints},
   author={Murugesan, Balamurali and Vasudeva, Sukesh Adiga and Liu, Bingyuan and Lombaert, Herv{\'e} and Ayed, Ismail Ben and Dolz, Jose},
   journal={arXiv preprint arXiv:2401.14487},
   year={2024}
 }
-
+```
 ```
 @article{murugesan2022calibrating,
   title={Calibrating Segmentation Networks with Margin-based Label Smoothing},
