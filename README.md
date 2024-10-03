@@ -6,9 +6,7 @@
 
 ## Examples
 ### CRaC
-```
 [CRaC](https://github.com/Bala93/CRac)
-```
 ### NACL
 ```
 python tools/train_net.py wandb.enable=True task="medseg" data="cardiac" model="unet" model.num_classes="4" loss="adaptive_margin_svls" loss.kernel_ops="mean" optim="adam" scheduler="step" wandb.project="unet-cardiac" loss.is_margin=True
