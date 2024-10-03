@@ -7,7 +7,7 @@
 ## Examples
 ### CRaC
 ```
-https://github.com/Bala93/CRac
+[CRaC](https://github.com/Bala93/CRac)
 ```
 ### NACL
 ```
