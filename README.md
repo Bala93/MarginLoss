@@ -7,7 +7,8 @@
 ### *Neighbor-Aware Calibration of Segmentation Networks with Penalty-Based Constraints* 
 [MedIA 2024](https://arxiv.org/abs/2401.14487) 
 
-
+### *Class and Region-Adaptive Constraints for Network Calibration* 
+[MICCAI 2025](https://arxiv.org/abs/2403.12364) 
 
 ## Examples
 ### CRaC
